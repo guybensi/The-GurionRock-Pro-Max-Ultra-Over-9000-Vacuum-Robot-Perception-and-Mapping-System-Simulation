@@ -11,13 +11,15 @@ import java.util.concurrent.TimeUnit;
  * No public constructor is allowed except for the empty constructor.
  */
 public class Future<T> {
-	
+	private volatile T result; // The result of the computation.
+    private volatile boolean isResolved; // Whether the result is resolved.
 	/**
 	 * This should be the the only public constructor in this class.
 	 */
 	public Future() {
-		//TODO: implement this
-	}
+        this.result = null;       // ערך התוצאה הוא null בהתחלה
+        this.isResolved = false;  // התוצאה לא הוסדרה עדיין
+    }
 	
 	/**
      * retrieves the result the Future object holds if it has been resolved.
@@ -28,23 +30,36 @@ public class Future<T> {
      * 	       
      */
 	public T get() {
-		//TODO: implement this.
-		return null;
-	}
+        synchronized (this) {
+            while (!isResolved) {
+                try {
+                    wait(); // Block the thread until the result is available.
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt(); // Handle interruption.
+                }
+            }
+            return result; // Return the resolved result.
+        }
+    }
 	
 	/**
      * Resolves the result of this Future object.
      */
-	public void resolve (T result) {
-		//TODO: implement this.
-	}
+	public void resolve(T result) {
+        synchronized (this) {
+            if (!isResolved) {
+                this.result = result;
+                isResolved = true;
+                notifyAll(); // Notify all threads waiting for the result.
+            }
+        }
+    }
 	
 	/**
      * @return true if this object has been resolved, false otherwise
      */
 	public boolean isDone() {
-		//TODO: implement this.
-		return false;
+		return isResolved;
 	}
 	
 	/**
@@ -59,8 +74,26 @@ public class Future<T> {
      *         elapsed, return null.
      */
 	public T get(long timeout, TimeUnit unit) {
-		//TODO: implement this.
-		return null;
-	}
+        synchronized (this) {
+            long millisTimeout = unit.toMillis(timeout); // Convert timeout to milliseconds.
+            long startTime = System.currentTimeMillis(); // Record the start time.
+            
+            while (!isResolved) {
+                long elapsedTime = System.currentTimeMillis() - startTime;
+                long remainingTime = millisTimeout - elapsedTime;
+                
+                if (remainingTime <= 0) {
+                    return null; // Timeout expired, return null.
+                }
+                
+                try {
+                    wait(remainingTime); // Wait for the result or the timeout.
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt(); // Handle interruption.
+                }
+            }
+            return result; // Return the resolved result.
+        }
+    }
 
 }
