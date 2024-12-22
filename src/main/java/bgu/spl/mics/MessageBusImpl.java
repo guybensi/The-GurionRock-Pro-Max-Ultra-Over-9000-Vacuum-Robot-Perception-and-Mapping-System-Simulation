@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 /**
@@ -31,15 +30,18 @@ public class MessageBusImpl implements MessageBus {
 //פונקציות חדשות
 	// בונה: אתחול כל המבנים
     private MessageBusImpl() {
-        eventSubscribers = new HashMap<>();
-        broadcastSubscribers = new HashMap<>();
-        eventFutures = new HashMap<>();
-        microServiceQueues = new HashMap<>();
+    // שימוש ב- ConcurrentHashMap כדי להבטיח thread-safety
+        eventSubscribers = new ConcurrentHashMap<>();
+        broadcastSubscribers = new ConcurrentHashMap<>();
+        eventFutures = new ConcurrentHashMap<>();
+        microServiceQueues = new ConcurrentHashMap<>();
     }
+
 
 	/**
      * מחזיר את המופע היחיד של MessageBusImpl (אם לא קיים ייווצר אחד).
      */
+    /* 
     public static MessageBusImpl getInstance() {
         // שימוש במנגנון סינכרון לוודא שמופע MessageBusImpl ייווצר רק פעם אחת
         if (instance == null) {
@@ -51,6 +53,7 @@ public class MessageBusImpl implements MessageBus {
         }
         return instance;
     }
+    */
 //פונקציות רשומות
 	@Override
 	public <T> void subscribeEvent(Class<? extends Event<T>> type, MicroService m) {
@@ -86,7 +89,12 @@ public class MessageBusImpl implements MessageBus {
 	@Override
 	public <T> void complete(Event<T> e, T result) {
 		// הוצא את ה-Future בצורה בטוחה מבלי לבצע cast לא בטוח
-		Future<?> future = eventFutures.remove(e);
+		Future<?> future = eventFutures.get(e); // מבצע cast רק אחרי בדיקה אם זה אותו סוג של Future   
+        if (future != null) {
+            // עדכן את התוצאה והגדר את ה-Future כ-"הושלם"
+            future.setResult(result);  // עדכון התוצאה
+            future.setIsResolved(true); // עדכון המצב ל-"נפתר"
+        }
 		
 		if (future != null) {
 			// ניתן לשלוח את התוצאה אם מדובר ב-Future מתאים
@@ -115,7 +123,7 @@ public class MessageBusImpl implements MessageBus {
                     // שמים את הברודקאסט בתור של המיקרו-שירות
                     microServiceQueues.get(m).put(b);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
             }
         }
@@ -185,15 +193,20 @@ public class MessageBusImpl implements MessageBus {
      */
     @Override
     public Message awaitMessage(MicroService m) throws InterruptedException {
-        // בודק אם המיקרו-שירות נרשם, אחרת זורק Exception
+        // בודק אם המיקרו-שירות נרשם
         BlockingQueue<Message> queue = microServiceQueues.get(m);
-        if (queue == null) {
-            throw new IllegalStateException("MicroService not registered.");
+
+        // אם לא נרשם, פשוט מחכה שהמיקרו-שירות יירשם או שההודעה תיכנס לתור
+        while (queue == null) {
+            // מחכה עד שהמיקרו-שירות יירשם לתור
+            Thread.sleep(50);  // עיכוב קטן (חצי שנייה) כדי לא לבצע חיפוש אינסופי
+            queue = microServiceQueues.get(m);  // בודק שוב אם המיקרו-שירות נרשם
         }
-        
-        // מחזיר את ההודעה הבאה בתור (חסימת תור אם אין הודעה)
-        return queue.take();
+
+        // מחזיר את ההודעה הבאה בתור, ומחכה אם אין הודעה זמינה
+        return queue.take();  // תחסום עד שיתקבלו הודעות
     }
+
 
 	
 

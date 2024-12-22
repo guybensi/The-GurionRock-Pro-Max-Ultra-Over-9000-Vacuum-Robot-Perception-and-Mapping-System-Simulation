@@ -31,7 +31,7 @@ public class Future<T> {
      */
 	public T get() {
         synchronized (this) {
-            while (!isResolved) {
+            while (!isDone()) {
                 try {
                     wait(); // Block the thread until the result is available.
                 } catch (InterruptedException e) {
@@ -47,7 +47,7 @@ public class Future<T> {
      */
 	public void resolve(T result) {
         synchronized (this) {
-            if (!isResolved) {
+            while (!isDone()) {
                 this.result = result;
                 isResolved = true;
                 notifyAll(); // Notify all threads waiting for the result.
@@ -78,7 +78,7 @@ public class Future<T> {
             long millisTimeout = unit.toMillis(timeout); // Convert timeout to milliseconds.
             long startTime = System.currentTimeMillis(); // Record the start time.
             
-            while (!isResolved) {
+            while (!isDone()) {
                 long elapsedTime = System.currentTimeMillis() - startTime;
                 long remainingTime = millisTimeout - elapsedTime;
                 
@@ -94,6 +94,15 @@ public class Future<T> {
             }
             return result; // Return the resolved result.
         }
+    }
+    
+    public void setResult(T result) {
+        this.result = result;
+    }
+
+    // עדכון מצב ה-"הושלם"
+    public void setIsResolved(boolean isResolved) {
+        this.isResolved = isResolved;
     }
 
 }
