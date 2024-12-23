@@ -1,12 +1,10 @@
 package bgu.spl.mics;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.Future;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 
 /**
  * The {@link MessageBusImpl class is the implementation of the MessageBus interface.
@@ -14,19 +12,13 @@ import java.util.concurrent.Future;
  * Only private fields and methods can be added to this class.
  */
 public class MessageBusImpl implements MessageBus {
-
-	// המפות עבור מנויים לאירועים וברודקאסטים
-    private final Map<Class<? extends Event<?>>, List<MicroService>> eventSubscribers = new ConcurrentHashMap<>();
+    private final Lock EventLock = new ReentrantLock();
+    private final Lock BroadcastLock = new ReentrantLock();
+    private final Map<Class<? extends Event<?>>, Queue<MicroService>> eventSubscribers = new ConcurrentHashMap<>();
     private final Map<Class<? extends Broadcast>, List<MicroService>> broadcastSubscribers = new ConcurrentHashMap<>();
-    
-    // שמירה על Future עבור כל Event (על מנת להחזיר את התוצאה אחרי שהאירוע יתבצע)
     private final Map<Event<?>, Future<?>> eventFutures = new ConcurrentHashMap<>();
-    
-    // שמירה על התורים של המיקרו-שירותים (לכל מיקרו-שירות יש תור הודעות)
     private final Map<MicroService, BlockingQueue<Message>> microServiceQueues = new ConcurrentHashMap<>();
-    
-    // סינגלטון: מופע יחיד של MessageBusImpl
-    private static MessageBusImpl instance = null;
+    private static volatile MessageBusImpl instance = null;
 //פונקציות חדשות
 
 
@@ -50,8 +42,8 @@ public class MessageBusImpl implements MessageBus {
 	@Override
 	public <T> void subscribeEvent(Class<? extends Event<T>> type, MicroService m) {
         // אם אין מנויים על סוג האירוע, ניצור רשימה חדשה
-        eventSubscribers.putIfAbsent(type, new ArrayList<>());
-        List<MicroService> subscribers = eventSubscribers.get(type);
+        eventSubscribers.putIfAbsent(type, new LinkedList<>());
+        Queue <MicroService> subscribers = eventSubscribers.get(type);
         
         // אם המיקרו-שירות לא נרשם כבר, נרשום אותו
         if (!subscribers.contains(m)) {
@@ -84,21 +76,10 @@ public class MessageBusImpl implements MessageBus {
 		Future<?> future = eventFutures.get(e); // מבצע cast רק אחרי בדיקה אם זה אותו סוג של Future   
         if (future != null) {
             // עדכן את התוצאה והגדר את ה-Future כ-"הושלם"
-            future.setResult(result);  // עדכון התוצאה
+            future.setResult((T)result);  // עדכון התוצאה
             future.setIsResolved(true); // עדכון המצב ל-"נפתר"
-        }
-		
-		if (future != null) {
-			// ניתן לשלוח את התוצאה אם מדובר ב-Future מתאים
-			try {
-				((Future<T>) future).get(); // שימוש ב-Future הכללי
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
-		}
+        }	
 	}
-	
-
 
 	/**
      * שולח ברודקאסט לכל המיקרו-שירותים שנרשמו לאותו ברודקאסט.
@@ -129,7 +110,7 @@ public class MessageBusImpl implements MessageBus {
     @Override
     public <T> Future<T> sendEvent(Event<T> e) {
         // בודק אם יש מנויים לאירוע מסוג זה
-        List<MicroService> subscribers = eventSubscribers.get(e.getClass());
+        Queue <MicroService> subscribers = eventSubscribers.get(e.getClass());
         
         // אם אין מנויים, מחזיר null
         if (subscribers == null || subscribers.isEmpty()) {
@@ -137,8 +118,8 @@ public class MessageBusImpl implements MessageBus {
         }
 
         // בוחר מיקרו-שירות לשלוח אליו את האירוע (בחרנו כאן את הראשון ברשימה)
-        MicroService selectedService = subscribers.get(0); // במימוש זה, בחרנו את המיקרו-שירות הראשון
-        Future<T> future = new CompletableFuture<>();
+        MicroService selectedService = subscribers.poll(); // במימוש זה, בחרנו את המיקרו-שירות הראשון
+        Future<T> future = new Future<>();
         
         // שומרים את ה-Future של האירוע כך שנוכל להחזיר את התוצאה בהמשך
         eventFutures.put(e, future);
@@ -146,6 +127,7 @@ public class MessageBusImpl implements MessageBus {
         try {
             // שולחים את האירוע למיקרו-שירות הנבחר
             microServiceQueues.get(selectedService).put(e);
+            subscribers.add(selectedService);
         } catch (InterruptedException ex) {
             ex.printStackTrace();
         }
@@ -154,14 +136,13 @@ public class MessageBusImpl implements MessageBus {
         return future;
     }
 
-	/**
-     * רושם מיקרו-שירות במערכת ומייצר עבורו תור הודעות.
-     */
     @Override
     public void register(MicroService m) {
-        // יצירת תור הודעות עבור המיקרו-שירות
-        microServiceQueues.put(m, new LinkedBlockingQueue<>());
+        synchronized(microServiceQueues){
+            microServiceQueues.put(m, new LinkedBlockingQueue<>());
+        }
     }
+    
 
 	@Override
     public void unregister(MicroService m) {
@@ -169,7 +150,7 @@ public class MessageBusImpl implements MessageBus {
         microServiceQueues.remove(m);
         
         // מסירים את המיקרו-שירות מהמנויים לאירועים
-        for (List<MicroService> subscribers : eventSubscribers.values()) {
+        for (Queue <MicroService> subscribers : eventSubscribers.values()) {
             subscribers.remove(m);
         }
         

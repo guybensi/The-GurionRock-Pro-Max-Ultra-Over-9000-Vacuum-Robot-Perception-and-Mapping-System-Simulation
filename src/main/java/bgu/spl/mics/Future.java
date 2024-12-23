@@ -98,6 +98,7 @@ public class Future<T> {
     
     public void setResult(T result) {
         this.result = result;
+        setIsResolved(true);
     }
 
     // עדכון מצב ה-"הושלם"
