@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Write your implementation here!
  * Only private fields and methods can be added to this class.
  */
-public class MessageBusImpl implements MessageBus {
+    public class MessageBusImpl implements MessageBus {
     private final Lock EventLock = new ReentrantLock();
     private final Lock BroadcastLock = new ReentrantLock();
     private final Map<Class<? extends Event<?>>, Queue<MicroService>> eventSubscribers = new ConcurrentHashMap<>();
@@ -21,10 +21,36 @@ public class MessageBusImpl implements MessageBus {
     private static volatile MessageBusImpl instance = null;
 //פונקציות חדשות
 
+    @Override
+    public void register(MicroService m) {
+        synchronized (microServiceQueues) {
+            microServiceQueues.putIfAbsent(m, new LinkedBlockingQueue<>());
+        }
+    }
+    @Override
+	public <T> void subscribeEvent(Class<? extends Event<T>> type, MicroService m) {
+        Queue <MicroService> subscribers;
+        synchronized(eventSubscribers){
+            eventSubscribers.putIfAbsent(type, new LinkedList<>());
+            subscribers = eventSubscribers.get(type);
+        }
+        if (!subscribers.contains(m)) {
+            subscribers.add(m);
+        }
+    }
 
-	/**
-     * מחזיר את המופע היחיד של MessageBusImpl (אם לא קיים ייווצר אחד).
-     */
+    @Override
+    public void subscribeBroadcast(Class<? extends Broadcast> type, MicroService m) {
+        List<MicroService> subscribers;
+        synchronized(broadcastSubscribers){
+            broadcastSubscribers.putIfAbsent(type, new ArrayList<>());
+            subscribers = broadcastSubscribers.get(type);
+        }
+        if (!subscribers.contains(m)) {
+            subscribers.add(m);
+        }
+    }
+
     
     public static MessageBusImpl getInstance() {
         // שימוש במנגנון סינכרון לוודא שמופע MessageBusImpl ייווצר רק פעם אחת
@@ -38,33 +64,7 @@ public class MessageBusImpl implements MessageBus {
         return instance;
     }
     
-//פונקציות רשומות
-	@Override
-	public <T> void subscribeEvent(Class<? extends Event<T>> type, MicroService m) {
-        // אם אין מנויים על סוג האירוע, ניצור רשימה חדשה
-        eventSubscribers.putIfAbsent(type, new LinkedList<>());
-        Queue <MicroService> subscribers = eventSubscribers.get(type);
-        
-        // אם המיקרו-שירות לא נרשם כבר, נרשום אותו
-        if (!subscribers.contains(m)) {
-            subscribers.add(m);
-        }
-    }
-
-	/**
-     * רושם מיקרו-שירות למנוי על ברודקאסט מסוג type.
-     */
-    @Override
-    public void subscribeBroadcast(Class<? extends Broadcast> type, MicroService m) {
-        // אם אין מנויים על סוג הברודקאסט, ניצור רשימה חדשה
-        broadcastSubscribers.putIfAbsent(type, new ArrayList<>());
-        List<MicroService> subscribers = broadcastSubscribers.get(type);
-        
-        // אם המיקרו-שירות לא נרשם כבר, נרשום אותו
-        if (!subscribers.contains(m)) {
-            subscribers.add(m);
-        }
-    }
+	
 
 	/**
      * מעדכן את ה-Future של האירוע, כשהוא מקבל את תוצאת הביצוע.
@@ -81,22 +81,21 @@ public class MessageBusImpl implements MessageBus {
         }	
 	}
 
-	/**
-     * שולח ברודקאסט לכל המיקרו-שירותים שנרשמו לאותו ברודקאסט.
-     */
     @Override
     public void sendBroadcast(Broadcast b) {
-        // בודק אם יש מנויים לברודקאסט מסוג זה
-        List<MicroService> subscribers = broadcastSubscribers.get(b.getClass());
+        List<MicroService> subscribers;
+        synchronized(broadcastSubscribers){
+            subscribers = broadcastSubscribers.get(b.getClass());
+        }
         
-        // אם יש מנויים, שולח להם את ההודעה
         if (subscribers != null) {
-            for (MicroService m : subscribers) {
-                try {
-                    // שמים את הברודקאסט בתור של המיקרו-שירות
-                    microServiceQueues.get(m).put(b);
-                } catch (InterruptedException e) {
-                    //e.printStackTrace();
+            synchronized(microServiceQueues){
+                for (MicroService m : subscribers) {
+                    try {
+                            microServiceQueues.get(m).put(b);
+                    } catch (InterruptedException e) {
+                        //e.printStackTrace();
+                    }
                 }
             }
         }
@@ -136,27 +135,25 @@ public class MessageBusImpl implements MessageBus {
         return future;
     }
 
-    @Override
-    public void register(MicroService m) {
-        synchronized(microServiceQueues){
-            microServiceQueues.put(m, new LinkedBlockingQueue<>());
-        }
-    }
+   
     
 
 	@Override
     public void unregister(MicroService m) {
-        // מסירים את המיקרו-שירות מהמפות השונות
-        microServiceQueues.remove(m);
-        
-        // מסירים את המיקרו-שירות מהמנויים לאירועים
-        for (Queue <MicroService> subscribers : eventSubscribers.values()) {
-            subscribers.remove(m);
+        synchronized (microServiceQueues){ 
+            if (microServiceQueues.containsKey(m)) {
+                microServiceQueues.remove(m); 
+            }
         }
-        
-        // מסירים את המיקרו-שירות מהמנויים לברודקאסטים
-        for (List<MicroService> subscribers : broadcastSubscribers.values()) {
-            subscribers.remove(m);
+        synchronized(eventSubscribers){
+            for (Queue <MicroService> subscribers : eventSubscribers.values()) {
+                subscribers.remove(m);
+            }
+        }
+        synchronized(broadcastSubscribers){
+            for (List<MicroService> subscribers : broadcastSubscribers.values()) {
+                subscribers.remove(m);
+            }
         }
     }
 
