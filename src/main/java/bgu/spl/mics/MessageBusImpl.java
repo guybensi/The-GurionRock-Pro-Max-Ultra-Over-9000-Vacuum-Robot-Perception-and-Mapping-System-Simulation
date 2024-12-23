@@ -16,32 +16,24 @@ import java.util.concurrent.Future;
 public class MessageBusImpl implements MessageBus {
 
 	// המפות עבור מנויים לאירועים וברודקאסטים
-    private final Map<Class<? extends Event<?>>, List<MicroService>> eventSubscribers;
-    private final Map<Class<? extends Broadcast>, List<MicroService>> broadcastSubscribers;
+    private final Map<Class<? extends Event<?>>, List<MicroService>> eventSubscribers = new ConcurrentHashMap<>();
+    private final Map<Class<? extends Broadcast>, List<MicroService>> broadcastSubscribers = new ConcurrentHashMap<>();
     
     // שמירה על Future עבור כל Event (על מנת להחזיר את התוצאה אחרי שהאירוע יתבצע)
-    private final Map<Event<?>, Future<?>> eventFutures;
+    private final Map<Event<?>, Future<?>> eventFutures = new ConcurrentHashMap<>();
     
     // שמירה על התורים של המיקרו-שירותים (לכל מיקרו-שירות יש תור הודעות)
-    private final Map<MicroService, BlockingQueue<Message>> microServiceQueues;
+    private final Map<MicroService, BlockingQueue<Message>> microServiceQueues = new ConcurrentHashMap<>();
     
     // סינגלטון: מופע יחיד של MessageBusImpl
     private static MessageBusImpl instance = null;
 //פונקציות חדשות
-	// בונה: אתחול כל המבנים
-    private MessageBusImpl() {
-    // שימוש ב- ConcurrentHashMap כדי להבטיח thread-safety
-        eventSubscribers = new ConcurrentHashMap<>();
-        broadcastSubscribers = new ConcurrentHashMap<>();
-        eventFutures = new ConcurrentHashMap<>();
-        microServiceQueues = new ConcurrentHashMap<>();
-    }
 
 
 	/**
      * מחזיר את המופע היחיד של MessageBusImpl (אם לא קיים ייווצר אחד).
      */
-    /* 
+    
     public static MessageBusImpl getInstance() {
         // שימוש במנגנון סינכרון לוודא שמופע MessageBusImpl ייווצר רק פעם אחת
         if (instance == null) {
@@ -53,7 +45,7 @@ public class MessageBusImpl implements MessageBus {
         }
         return instance;
     }
-    */
+    
 //פונקציות רשומות
 	@Override
 	public <T> void subscribeEvent(Class<? extends Event<T>> type, MicroService m) {
