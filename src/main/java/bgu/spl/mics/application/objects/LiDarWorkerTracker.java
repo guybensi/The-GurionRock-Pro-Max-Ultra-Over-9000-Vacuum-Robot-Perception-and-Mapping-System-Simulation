@@ -13,13 +13,6 @@ public class LiDarWorkerTracker {
     private STATUS status;  // The status of the LiDar (Up, Down, Error)
     private List<TrackedObject> lastTrackedObjects;  // The list of last tracked objects
 
-    // Enum representing the LiDar status.
-    public enum Status {
-        Up,
-        Down,
-        Error
-    }
-
     // Constructor to initialize the LiDarWorkerTracker object.
     public LiDarWorkerTracker(int id, int frequency, STATUS status, List<TrackedObject> lastTrackedObjects) {
         this.id = id;

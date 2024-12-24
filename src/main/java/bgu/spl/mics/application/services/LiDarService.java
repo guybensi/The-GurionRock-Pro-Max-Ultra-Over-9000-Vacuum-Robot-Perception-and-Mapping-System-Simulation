@@ -1,6 +1,7 @@
 package bgu.spl.mics.application.services;
 
 import bgu.spl.mics.MicroService;
+import bgu.spl.mics.application.objects.LiDarWorkerTracker;
 
 /**
  * LiDarService is responsible for processing data from the LiDAR sensor and
@@ -17,7 +18,7 @@ public class LiDarService extends MicroService {
      *
      * @param liDarTracker The LiDAR tracker object that this service will use to process data.
      */
-    public LiDarService(LiDarTracker liDarTracker) {
+     public LiDarService(LiDarWorkerTracker LiDarWorkerTracker) {
         super("Change_This_Name");
         // TODO Implement this
     }
