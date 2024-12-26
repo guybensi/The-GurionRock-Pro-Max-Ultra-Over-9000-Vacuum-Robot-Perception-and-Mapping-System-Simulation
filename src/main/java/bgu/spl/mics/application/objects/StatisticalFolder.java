@@ -1,3 +1,5 @@
+package bgu.spl.mics.application.objects;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StatisticalFolder {
@@ -18,14 +20,18 @@ public class StatisticalFolder {
     }
     public static StatisticalFolder getInstance() {
         if (instance == null) {
-            instance = new StatisticalFolder(); // Create the instance if it doesn't exist
+            synchronized (StatisticalFolder.class) {
+                if (instance == null) {
+                    instance = new StatisticalFolder();
+                }
+            }
         }
         return instance;
     }
 
     // Getters
     public int getSystemRuntime() {
-        return systemRuntime.get();
+        return systemRuntime.get();   
     }
 
     public int getNumDetectedObjects() {
@@ -40,37 +46,20 @@ public class StatisticalFolder {
         return numLandmarks.get();
     }
 
-    // Setters (Optional)
-    public void setSystemRuntime(int systemRuntime) {
-        this.systemRuntime.set(systemRuntime);
-    }
-
-    public void setNumDetectedObjects(int numDetectedObjects) {
-        this.numDetectedObjects.set(numDetectedObjects);
-    }
-
-    public void setNumTrackedObjects(int numTrackedObjects) {
-        this.numTrackedObjects.set(numTrackedObjects);
-    }
-
-    public void setNumLandmarks(int numLandmarks) {
-        this.numLandmarks.set(numLandmarks);
-    }
-
     // Methods to update the statistics
     public void updateSystemRuntime(int timeTick) {
-        this.systemRuntime.addAndGet(timeTick);  // Increment system runtime by the time tick
+        this.systemRuntime.addAndGet(timeTick); // Increment system runtime by the time tick
     }
 
     public void updateNumDetectedObjects(int detectedObjectsCount) {
-        this.numDetectedObjects.addAndGet(detectedObjectsCount);  // Increment detected objects count
+        this.numDetectedObjects.addAndGet(detectedObjectsCount); // Increment detected objects count
     }
 
     public void updateNumTrackedObjects(int trackedObjectsCount) {
-        this.numTrackedObjects.addAndGet(trackedObjectsCount);  // Increment tracked objects count
+        this.numTrackedObjects.addAndGet(trackedObjectsCount); // Increment tracked objects count
     }
 
     public void updateNumLandmarks(int newLandmarksCount) {
-        this.numLandmarks.addAndGet(newLandmarksCount);  // Increment landmarks count
+        this.numLandmarks.addAndGet(newLandmarksCount); // Increment landmarks count
     }
 }

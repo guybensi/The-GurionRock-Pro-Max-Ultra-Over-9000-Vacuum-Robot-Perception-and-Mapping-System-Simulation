@@ -43,6 +43,7 @@ public class CameraService extends MicroService {
             int currentTime = broadcast.getTime();
 
             // Check if the camera is active and it's time to send an event
+            //--------------------לוודא את עניין הזמנים שוב
             if (camera.getStatus() == STATUS.UP) {
                 StampedDetectedObject detectedObject = camera.getDetectedObjectsAtTime(currentTime + camera.getFrequency());
 

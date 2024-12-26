@@ -111,7 +111,7 @@ public class FusionSlam {
      * @param pose             The current pose of the robot.
      * @return A list of transformed global coordinates.
      */
-    private List<CloudPoint> transformToGlobal(CloudPoint[] localCoordinates, Pose pose) {
+    private List<CloudPoint> transformToGlobal(List<CloudPoint> localCoordinates, Pose pose) {
         List<CloudPoint> globalCoordinates = new ArrayList<>();
 
         double yawRadians = Math.toRadians(pose.getYaw());
