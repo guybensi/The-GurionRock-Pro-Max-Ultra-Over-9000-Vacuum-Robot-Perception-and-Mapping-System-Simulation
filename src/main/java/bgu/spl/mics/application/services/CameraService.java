@@ -1,10 +1,15 @@
 package bgu.spl.mics.application.services;
 
+import java.util.List;
 import bgu.spl.mics.Broadcast;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.DetectObjectsEvent;
+import bgu.spl.mics.application.messages.TerminatedBroadcast;
 import bgu.spl.mics.application.messages.TickBroadcast;
 import bgu.spl.mics.application.objects.Camera;
+import bgu.spl.mics.application.objects.StampedDetectedObject;
+import bgu.spl.mics.application.objects.STATUS;
+import bgu.spl.mics.application.objects.StatisticalFolder;
 
 /**
  * CameraService is responsible for processing data from the camera and
@@ -33,29 +38,32 @@ public class CameraService extends MicroService {
      */
     @Override
     protected void initialize() {
-        // Subscribe to TickBroadcast to act on each time tick
-        subscribeBroadcast(TickBroadcast.class, broadcast -> {
+        // Subscribe to TickBroadcast
+        subscribeBroadcast(TickBroadcast.class, (TickBroadcast broadcast) -> {
             int currentTime = broadcast.getTime();
 
-            // Check if it's time to send a DetectObjectsEvent based on the camera's frequency
-            if (currentTime % camera.getFrequency() == 0) {
-                // Retrieve detected objects
-                var detectedObjects = camera.detectObjects(currentTime);
+            // Check if the camera is active and it's time to send an event
+            if (camera.getStatus() == STATUS.UP) {
+                StampedDetectedObject detectedObject = camera.getDetectedObjectsAtTime(currentTime + camera.getFrequency());
 
-                // If there are detected objects, create and send a DetectObjectsEvent
-                if (!detectedObjects.isEmpty()) {
-                    DetectObjectsEvent event = new DetectObjectsEvent(detectedObjects, currentTime);
+                if (detectedObject != null) {
+                    DetectObjectsEvent event = new DetectObjectsEvent(detectedObject, getName());
                     sendEvent(event);
 
                     // Update the statistical folder
-                    camera.getStatisticalFolder().incrementDetectedObjects(detectedObjects.size());
+                    StatisticalFolder.getInstance().updateNumDetectedObjects(1); 
                 }
             }
         });
-
-        // Subscribe to Termination Broadcast to cleanly shut down the service
-        subscribeBroadcast(Broadcast.class, broadcast -> {
+//--------------------------------------לבדוק------------------------------------------------------------
+        // Subscribe to TerminatedBroadcast
+        subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
             terminate();
         });
+        // Subscribe to TerminatedBroadcast
+        subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
+            terminate();// צריך לעשות גם לקראש
+        });
+        
     }
 }
