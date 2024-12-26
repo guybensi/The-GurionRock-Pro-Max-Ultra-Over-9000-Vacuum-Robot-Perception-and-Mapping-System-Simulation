@@ -21,7 +21,6 @@ public class Camera {
     private List<StampedDetectedObject> detectedObjectsList; 
     private int maxTime;
 
-    // Constructor for Camera.
     public Camera(int id, int frequency, String filePath, String cameraKey) {
         this.id = id;
         this.frequency = frequency;
@@ -46,11 +45,6 @@ public class Camera {
         return detectedObjectsList;
     }
 
-    // Method to simulate the camera detecting an object and adding it to the list.
-    public void detectObject(StampedDetectedObject detectedObject) {
-        detectedObjectsList.add(detectedObject);
-    }
-
     public StampedDetectedObject getDetectedObjectsAtTime(int time) {
         checkIfDone(time);
         for (StampedDetectedObject stampedObject : detectedObjectsList) {
@@ -61,24 +55,16 @@ public class Camera {
         return null; // Return an empty list if no objects were detected at the given time
     }
 
-    /**
-     * Reads detected objects from a JSON file and fills the detectedObjectsList.
-     *
-     * @param filePath The path to the JSON file.
-     */
     public void loadDetectedObjectsFromFile(String filePath, String cameraKey) {
         try (FileReader reader = new FileReader(filePath)) {
             Gson gson = new Gson();
-            // Read the entire JSON file as a map of camera keys to their data
             java.lang.reflect.Type type = new TypeToken<Map<String, List<StampedDetectedObject>>>() {}.getType();
             Map<String, List<StampedDetectedObject>> cameraData = gson.fromJson(reader, type);
-
-            // Get the data for the specified camera key
             List<StampedDetectedObject> cameraObjects = cameraData.get(cameraKey);
 
             if (cameraObjects != null) {
                 detectedObjectsList = new ArrayList<>(cameraObjects);
-                maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(0); // זמן ברירת מחדל 0 אם אין אובייקטים
+                maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(0);
             } else {
                 detectedObjectsList = new ArrayList<>(); // No data for this camera, initialize empty list
             }

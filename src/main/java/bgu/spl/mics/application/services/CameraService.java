@@ -27,7 +27,7 @@ public class CameraService extends MicroService {
      * @param camera The Camera object that this service will use to detect objects.
      */
     public CameraService(Camera camera) {
-        super("CameraService");
+        super("CameraService" + camera.getId());
         this.camera = camera;
     }
 
@@ -54,7 +54,10 @@ public class CameraService extends MicroService {
                     StatisticalFolder.getInstance().updateNumDetectedObjects(1); 
                 }
             }
-            else{terminate();}
+            else {
+                terminate();
+                sendBroadcast(new TerminatedBroadcast(getName()));     
+            }
         });
 //--------------------------------------לבדוק------------------------------------------------------------
         // Subscribe to TerminatedBroadcast

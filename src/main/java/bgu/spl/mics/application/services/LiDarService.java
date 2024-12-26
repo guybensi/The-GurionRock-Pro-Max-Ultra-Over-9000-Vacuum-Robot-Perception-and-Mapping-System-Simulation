@@ -1,14 +1,19 @@
 package bgu.spl.mics.application.services;
 
 import bgu.spl.mics.MicroService;
+import bgu.spl.mics.application.messages.CrashedBroadcast;
 import bgu.spl.mics.application.messages.DetectObjectsEvent;
 import bgu.spl.mics.application.messages.TickBroadcast;
 import bgu.spl.mics.application.messages.TerminatedBroadcast;
 import bgu.spl.mics.application.messages.TrackedObjectsEvent;
+import bgu.spl.mics.application.objects.DetectedObject;
 import bgu.spl.mics.application.objects.LiDarWorkerTracker;
 import bgu.spl.mics.application.objects.STATUS;
+import bgu.spl.mics.application.objects.StampedDetectedObject;
 import bgu.spl.mics.application.objects.TrackedObject;
 import bgu.spl.mics.application.objects.StatisticalFolder;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -23,51 +28,61 @@ public class LiDarService extends MicroService {
 
     private final LiDarWorkerTracker lidarWorkerTracker;
 
-    /**
-     * Constructor for LiDarService.
-     *
-     * @param name The name of the service.
-     * @param lidarWorkerTracker A LiDAR Tracker worker object that this service will use to process data.
-     */
     public LiDarService(String name, LiDarWorkerTracker lidarWorkerTracker) {
         super(name);
         this.lidarWorkerTracker = lidarWorkerTracker;
     }
 
-    /**
-     * Initializes the LiDarService.
-     * Registers the service to handle DetectObjectsEvents and TickBroadcasts,
-     * and sets up the necessary callbacks for processing data.
-     */
     @Override
     protected void initialize() {
-        // Subscribe to TickBroadcast
         subscribeBroadcast(TickBroadcast.class, (TickBroadcast broadcast) -> {
-            int currentTime = broadcast.getTime();
-
-            // Process data if the LiDAR is active and it's time to send updates
-            if (lidarWorkerTracker.getStatus() == STATUS.UP) {
-                List<TrackedObject> trackedObjects = lidarWorkerTracker.getTrackedObjectsAtTime(currentTime + lidarWorkerTracker.getFrequency());
-
-                if (trackedObjects != null && !trackedObjects.isEmpty()) {
-                    // Send a single TrackedObjectsEvent with the list of tracked objects
-                    TrackedObjectsEvent event = new TrackedObjectsEvent(trackedObjects, currentTime);
-                    sendEvent(event);
-
-                    // Update statistical data
-                    StatisticalFolder.getInstance().updateNumTrackedObjects(1); 
+        //----------------------fill
+        });
+        subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
+        //----------------------fill
+        });
+        subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
+        //----------------------fill
+        });
+    
+        // ---------------ראשוני, צריך להבין
+        subscribeEvent(DetectObjectsEvent.class, (DetectObjectsEvent event) -> {
+            List<TrackedObject> trackedObjects = new ArrayList<>();
+        
+            // Retrieve the detected objects from the event
+            StampedDetectedObject stampedDetectedObjects = event.getStampedDetectedObjects();
+            int detectionTime = stampedDetectedObjects.getTime();
+            int processingTime = detectionTime + lidarWorkerTracker.getFrequency();
+        
+            // Ensure the current time aligns with the LiDAR worker's processing time
+            if (currentTick >= processingTime) {
+                List<DetectedObject> detectedObjects = stampedDetectedObjects.getDetectedObjects();
+        
+                // Process each detected object
+                for (DetectedObject detectedObject : detectedObjects) {
+                    // Create a TrackedObject with the coordinates from LiDAR
+                    TrackedObject trackedObject = new TrackedObject(
+                        detectedObject.getId(),
+                        detectionTime,
+                        detectedObject.getDescription(),
+                        lidarWorkerTracker.getCoordinates(
+                            detectedObject.getId(),
+                            processingTime
+                        )
+                    );
+        
+                    // Add to the list of tracked objects
+                    trackedObjects.add(trackedObject);
                 }
+        
+                // Send a new TrackedObjectsEvent with the tracked objects
+                sendEvent(new TrackedObjectsEvent(processingTime, trackedObjects, getName()));
+        
+                // Update statistics
+                StatisticalFolder.getInstance().updateNumTrackedObjects(trackedObjects.size());
             }
         });
 
-        // Subscribe to DetectObjectsEvent
-        subscribeEvent(DetectObjectsEvent.class, (DetectObjectsEvent event) -> {
-            lidarWorkerTracker.processDetectObjectsEvent(event);
-        });
-
-        // Subscribe to TerminatedBroadcast
-        subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
-            terminate();
-        });
     }
+        
 }

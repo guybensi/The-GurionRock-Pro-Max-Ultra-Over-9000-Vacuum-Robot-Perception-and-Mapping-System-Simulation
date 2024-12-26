@@ -14,8 +14,6 @@ public class CloudPoint {
         this.y = y;
     }
 
-    // Getters and Setters for x, y coordinates
-
     public double getX() {
         return x;
     }
