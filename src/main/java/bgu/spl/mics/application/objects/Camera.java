@@ -2,7 +2,9 @@ package bgu.spl.mics.application.objects;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -19,11 +21,11 @@ public class Camera {
     private List<StampedDetectedObject> detectedObjectsList; // צריך ליצור מחלקה כזאת
 
     // Constructor for Camera.
-    public Camera(int id, int frequency, String filePath) {
+    public Camera(int id, int frequency, String filePath, String cameraKey) {
         this.id = id;
         this.frequency = frequency;
         this.status = STATUS.UP;
-        loadDetectedObjectsFromFile(filePath);
+        loadDetectedObjectsFromFile(filePath, cameraKey);
     }
 
 
@@ -63,35 +65,31 @@ public class Camera {
      *
      * @param filePath The path to the JSON file.
      */
-    public void loadDetectedObjectsFromFile(String filePath) {
+    public void loadDetectedObjectsFromFile(String filePath, String cameraKey) {
         try (FileReader reader = new FileReader(filePath)) {
             Gson gson = new Gson();
-            List<StampedDetectedObject> loadedObjects = gson.fromJson(reader, new TypeToken<List<StampedDetectedObject>>() {}.getType());
-            detectedObjectsList = loadedObjects; // Replace the existing list with the loaded data
-        } catch (IOException e) {
-                e.printStackTrace();
+            // Read the entire JSON file as a map of camera keys to their data
+            java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {}.getType();
+            Map<String, List<List<StampedDetectedObject>>> cameraData = gson.fromJson(reader, type);
+
+            // Get the data for the specified camera key
+            List<List<StampedDetectedObject>> cameraObjects = cameraData.get(cameraKey);
+
+            if (cameraObjects != null) {
+                // Flatten the list of lists into a single list of StampedDetectedObject
+                detectedObjectsList = new ArrayList<>();
+                for (List<StampedDetectedObject> objectsAtTime : cameraObjects) {
+                    detectedObjectsList.addAll(objectsAtTime);
+                }
+            } else {
+                detectedObjectsList = new ArrayList<>(); // No data for this camera, initialize empty list
             }
+        } catch (IOException ignored) {
+            detectedObjectsList = new ArrayList<>(); // On error, initialize empty list
+        }
     }
 
     public void setStatus(STATUS status) {
         this.status = status;
     }
-
-    // Method to simulate the camera sending events.
-    // אנחנו צריכים או שזה  callback?
-/* 
-    public void setId(int id) {
-        this.id = id;
-    }
-    public void setFrequency(int frequency) {
-        this.frequency = frequency;
-    }
-    
-    public void setStatus(String statusString) {
-        this.status = STATUS.fromString(statusString);  // Use the helper method to set the status
-    }
-    public void setDetectedObjectsList(List<StampedDetectedObject> detectedObjectsList) {
-        this.detectedObjectsList = detectedObjectsList;
-    }
-*/
 }
