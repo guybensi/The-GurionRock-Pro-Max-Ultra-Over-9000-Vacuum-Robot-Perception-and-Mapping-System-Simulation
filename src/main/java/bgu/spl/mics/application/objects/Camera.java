@@ -17,19 +17,19 @@ public class Camera {
 
     private int id;
     private int frequency;
-    private STATUS status;  // The status of the camera (UP, DOWN, ERROR)
-    private List<StampedDetectedObject> detectedObjectsList; // צריך ליצור מחלקה כזאת
+    private STATUS status; 
+    private List<StampedDetectedObject> detectedObjectsList; 
+    private int maxTime;
 
     // Constructor for Camera.
     public Camera(int id, int frequency, String filePath, String cameraKey) {
         this.id = id;
         this.frequency = frequency;
         this.status = STATUS.UP;
+        maxTime = 0;
         loadDetectedObjectsFromFile(filePath, cameraKey);
     }
 
-
-    // Getters and setters for the fields.
     public int getId() {
         return id;
     }
@@ -52,9 +52,10 @@ public class Camera {
     }
 
     public StampedDetectedObject getDetectedObjectsAtTime(int time) {
+        checkIfDone(time);
         for (StampedDetectedObject stampedObject : detectedObjectsList) {
             if (stampedObject.getTime() == time) {
-                return stampedObject;
+                return stampedObject; 
             }
         }
         return null; // Return an empty list if no objects were detected at the given time
@@ -69,23 +70,26 @@ public class Camera {
         try (FileReader reader = new FileReader(filePath)) {
             Gson gson = new Gson();
             // Read the entire JSON file as a map of camera keys to their data
-            java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {}.getType();
-            Map<String, List<List<StampedDetectedObject>>> cameraData = gson.fromJson(reader, type);
+            java.lang.reflect.Type type = new TypeToken<Map<String, List<StampedDetectedObject>>>() {}.getType();
+            Map<String, List<StampedDetectedObject>> cameraData = gson.fromJson(reader, type);
 
             // Get the data for the specified camera key
-            List<List<StampedDetectedObject>> cameraObjects = cameraData.get(cameraKey);
+            List<StampedDetectedObject> cameraObjects = cameraData.get(cameraKey);
 
             if (cameraObjects != null) {
-                // Flatten the list of lists into a single list of StampedDetectedObject
-                detectedObjectsList = new ArrayList<>();
-                for (List<StampedDetectedObject> objectsAtTime : cameraObjects) {
-                    detectedObjectsList.addAll(objectsAtTime);
-                }
+                detectedObjectsList = new ArrayList<>(cameraObjects);
+                maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(0); // זמן ברירת מחדל 0 אם אין אובייקטים
             } else {
                 detectedObjectsList = new ArrayList<>(); // No data for this camera, initialize empty list
             }
         } catch (IOException ignored) {
             detectedObjectsList = new ArrayList<>(); // On error, initialize empty list
+        }
+    }
+
+    public void checkIfDone(int currentTime) {
+        if (currentTime + frequency > maxTime) {
+            setStatus(STATUS.DOWN);
         }
     }
 

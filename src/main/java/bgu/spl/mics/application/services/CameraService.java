@@ -54,6 +54,7 @@ public class CameraService extends MicroService {
                     StatisticalFolder.getInstance().updateNumDetectedObjects(1); 
                 }
             }
+            else{terminate();}
         });
 //--------------------------------------לבדוק------------------------------------------------------------
         // Subscribe to TerminatedBroadcast
