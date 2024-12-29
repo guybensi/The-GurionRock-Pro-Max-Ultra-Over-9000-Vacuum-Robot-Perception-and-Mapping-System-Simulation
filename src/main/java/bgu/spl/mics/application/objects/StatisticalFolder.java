@@ -3,8 +3,7 @@ package bgu.spl.mics.application.objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StatisticalFolder {
-    private static StatisticalFolder instance = null;
-
+  
     // Fields using AtomicInteger for thread-safety
     private AtomicInteger systemRuntime;          // The total runtime of the system (in ticks)
     private AtomicInteger numDetectedObjects;     // The cumulative count of objects detected by all cameras
@@ -18,17 +17,15 @@ public class StatisticalFolder {
         this.numTrackedObjects = new AtomicInteger(0);
         this.numLandmarks = new AtomicInteger(0);
     }
-    public static StatisticalFolder getInstance() {
-        if (instance == null) {
-            synchronized (StatisticalFolder.class) {
-                if (instance == null) {
-                    instance = new StatisticalFolder();
-                }
-            }
-        }
-        return instance;
+    // Singleton Holder for thread-safe מימוש כמו בכיתה
+    private static class SingletonHolderStatisticalFolder {
+        private static final StatisticalFolder INSTANCE = new StatisticalFolder();
     }
 
+    public static StatisticalFolder getInstance() {
+        return SingletonHolderStatisticalFolder.INSTANCE;
+    }
+    
     // Getters
     public int getSystemRuntime() {
         return systemRuntime.get();   

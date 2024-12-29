@@ -17,10 +17,15 @@ import java.util.concurrent.*;
         private final Map<MicroService, BlockingQueue<Message>> microServiceEventQueues = new ConcurrentHashMap<>();
         private final Map<MicroService, BlockingQueue<Message>> microServiceBroadcastQueues = new ConcurrentHashMap<>();
 
-        private static volatile MessageBusImpl instance = null;
-//פונקציות חדשות
+        private static class SingletonHolderMessageBusImpl { // מימוש כמו שהוצג בכיתה
+            private static final MessageBusImpl INSTANCE = new MessageBusImpl();
+        }
+    
+        public static MessageBusImpl getInstance() {
+            return SingletonHolderMessageBusImpl.INSTANCE;
+        }
 
-    @Override
+        @Override
         public void register(MicroService m) {
             microServiceEventQueues.putIfAbsent(m, new LinkedBlockingQueue<>());
             microServiceBroadcastQueues.putIfAbsent(m, new LinkedBlockingQueue<>());
@@ -44,18 +49,7 @@ import java.util.concurrent.*;
         }
 
         
-        public static MessageBusImpl getInstance() {
-            // שימוש במנגנון סינכרון לוודא שמופע MessageBusImpl ייווצר רק פעם אחת
-            if (instance == null) {
-                synchronized (MessageBusImpl.class) {
-                    if (instance == null) {
-                        instance = new MessageBusImpl();
-                    }
-                }
-            }
-            return instance;
-        }
-        
+
         
 
         /**
@@ -67,7 +61,7 @@ import java.util.concurrent.*;
             @SuppressWarnings("unchecked")
             Future<T> future = (Future<T>) eventFutures.get(e);
             if (future != null) {
-                future.setResult(result); // עדכון התוצאה
+                future.resolve(result); // עדכון התוצאה
             }
         }
         
