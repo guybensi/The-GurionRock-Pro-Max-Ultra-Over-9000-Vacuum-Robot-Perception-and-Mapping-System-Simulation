@@ -38,10 +38,12 @@ public class LiDarService extends MicroService {
         //----------------------זונות של הצאט 2
         });
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
-        //----------------------fill
+        //----------------------fill- what should we do here 
         });
         subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
-        //----------------------fill
+        terminate();
+        sendBroadcast(new TerminatedBroadcast(getName()));
+        //should we do more?
         });
     
         //--------------------לוודא את עניין הזמנים שוב
@@ -49,11 +51,17 @@ public class LiDarService extends MicroService {
             //-------------------מתי הופכים אותו לDOWN?
             if(lidarWorkerTracker.getStatus()==STATUS.UP){   
                 List<TrackedObject> TrackedObjects = lidarWorkerTracker.prosseingEvent(event.getStampedDetectedObjects());
-                complete(event, true);//האירוע טופל
-                //--------------להבין את הזמנים בדיוק
+               if (lidarWorkerTracker.getStatus()==STATUS.ERROR){
+                terminate();
+                sendBroadcast(new CrashedBroadcast("LidarWorker" + lidarWorkerTracker.getId() + "disconnected", this.getName()));
+               }
+               else{//--------------להבין את הזמנים בדיוק
+                complete(event, true);
                 sendEvent(new TrackedObjectsEvent(event.getStampedDetectedObjects().getTime(), TrackedObjects, getName()));
                 StatisticalFolder.getInstance().updateNumTrackedObjects(TrackedObjects.size());
-            }else{
+               }
+            }
+            else{//down
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));    
             }
