@@ -42,6 +42,8 @@ public class FusionSlamService extends MicroService {
         subscribeBroadcast(TickBroadcast.class, broadcast -> {
             if (broadcast.isFinalTick()) {
                 terminate();
+                //הדפסות סיום 
+                // איך מכבים את שאר הסרוויסים
             }
             ////-------לבדוק אם צריך לעדכן זמנים כי פיוזן סלאם לא מתשתשת בזמן ולבדוק final tick
         });
@@ -49,12 +51,15 @@ public class FusionSlamService extends MicroService {
         // Register for TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, broadcast -> {
             fusionSlam.decreaseServiceCounter();
-            //------------צריך לקרות פה דברים
+            if (fusionSlam.getserviceCounter() == 0){
+                //הדפסות סיום 
+            }
         });
 
         // Register for CrashedBroadcast
         subscribeBroadcast(CrashedBroadcast.class, broadcast -> {
             terminate();
+            //הדפסות סיום שכוללות שגיאות 
         });
     }
 }
