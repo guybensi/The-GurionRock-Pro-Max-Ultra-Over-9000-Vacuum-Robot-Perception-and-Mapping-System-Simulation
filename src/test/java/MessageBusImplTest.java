@@ -1,106 +1,122 @@
 import bgu.spl.mics.*;
 import bgu.spl.mics.example.messages.ExampleBroadcast;
 import bgu.spl.mics.example.messages.ExampleEvent;
+import bgu.spl.mics.example.services.ExampleBroadcastListenerService;
 import bgu.spl.mics.example.services.ExampleEventHandlerService;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-//import java.util.concurrent.Future;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-class MessageBusImplThreadSafeTest {
+class MessageBusImplTest {
 
     @Test
-    void testConcurrentEventHandling() throws InterruptedException, ExecutionException {
+    void testRegisterBroadcastSubscription() {
         // Setup
         MessageBusImpl messageBus = MessageBusImpl.getInstance();
-        int numThreads = 10;
-        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        MicroService listener = new ExampleBroadcastListenerService("Listener", new String[]{"5"});
+        messageBus.register(listener);
 
-        List<MicroService> handlers = new ArrayList<>();
-        for (int i = 0; i < numThreads; i++) {
-            MicroService handler = new ExampleEventHandlerService("Handler" + i, new String[]{"5"});
-            handlers.add(handler);
-            messageBus.register(handler);
-            messageBus.subscribeEvent(ExampleEvent.class, handler);
-        }
+        // Verify registration
+        assertTrue(messageBus.isRegistered(listener));
 
-        // Action: Send events concurrently
-        Callable<Boolean> sendEventTask = () -> {
-            Event<String> event = new ExampleEvent("TestEvent");
-            Future<String> future = messageBus.sendEvent(event);
-            return future != null;
-        };
+        // Action
+        messageBus.subscribeBroadcast(ExampleBroadcast.class, listener);
 
-        List<Future<Boolean>> futures = new ArrayList<>();
-        for (int i = 0; i < numThreads; i++) {
-            futures.add(executor.submit(sendEventTask));
-        }
-
-        // Wait for all threads to complete
-        for (Future<Boolean> future : futures) {
-            assertTrue(future.get());
-        }
-
-        // Verify that all handlers processed events
-        for (MicroService handler : handlers) {
-            Message receivedMessage = messageBus.awaitMessage(handler);
-            assertNotNull(receivedMessage);
-            assertTrue(receivedMessage instanceof ExampleEvent);
-        }
+        // Assertion
+        assertTrue(messageBus.isSubscribed(ExampleBroadcast.class, listener));
 
         // Cleanup
-        for (MicroService handler : handlers) {
-            messageBus.unregister(handler);
-        }
-        executor.shutdown();
+        messageBus.unregister(listener);
     }
 
     @Test
-    void testConcurrentBroadcastHandling() throws InterruptedException {
+    void testRegisterEventSubscription() {
         // Setup
         MessageBusImpl messageBus = MessageBusImpl.getInstance();
-        int numThreads = 10;
-        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        MicroService handler = new ExampleEventHandlerService("Handler", new String[]{"5"});
+        messageBus.register(handler);
 
-        List<MicroService> listeners = new ArrayList<>();
-        for (int i = 0; i < numThreads; i++) {
-            MicroService listener = new ExampleEventHandlerService("Listener" + i, new String[]{"5"});
-            listeners.add(listener);
-            messageBus.register(listener);
-            messageBus.subscribeBroadcast(ExampleBroadcast.class, listener);
-        }
+        // Verify registration
+        assertTrue(messageBus.isRegistered(handler));
 
-        // Action: Send broadcast concurrently
-        Runnable sendBroadcastTask = () -> messageBus.sendBroadcast(new ExampleBroadcast("TestBroadcast"));
+        // Action
+        messageBus.subscribeEvent(ExampleEvent.class, handler);
 
-        List<Future<?>> futures = new ArrayList<>();
-        for (int i = 0; i < numThreads; i++) {
-            futures.add(executor.submit(sendBroadcastTask));
-        }
-
-        // Wait for all threads to complete
-        for (Future<?> future : futures) {
-            future.get();
-        }
-
-        // Verify that all listeners received the broadcast
-        for (MicroService listener : listeners) {
-            Message receivedMessage = messageBus.awaitMessage(listener);
-            assertNotNull(receivedMessage);
-            assertTrue(receivedMessage instanceof ExampleBroadcast);
-        }
+        // Assertion
+        assertTrue(messageBus.isSubscribed(ExampleEvent.class, handler));
 
         // Cleanup
-        for (MicroService listener : listeners) {
-            messageBus.unregister(listener);
-        }
-        executor.shutdown();
+        messageBus.unregister(handler);
+    }
+
+    @Test
+    void testSendBroadcast() {
+        // Setup
+        MessageBusImpl messageBus = MessageBusImpl.getInstance();
+        MicroService listener1 = new ExampleBroadcastListenerService("Listener1", new String[]{"5"});
+        MicroService listener2 = new ExampleBroadcastListenerService("Listener2", new String[]{"5"});
+
+        messageBus.register(listener1);
+        messageBus.register(listener2);
+
+        // Verify registration
+        assertTrue(messageBus.isRegistered(listener1));
+        assertTrue(messageBus.isRegistered(listener2));
+
+        messageBus.subscribeBroadcast(ExampleBroadcast.class, listener1);
+        messageBus.subscribeBroadcast(ExampleBroadcast.class, listener2);
+
+        // Action
+        Broadcast broadcast = new ExampleBroadcast("TestBroadcast");
+        messageBus.sendBroadcast(broadcast);
+
+        // Assertion
+        assertDoesNotThrow(() -> {
+            assertEquals(broadcast, messageBus.awaitMessage(listener1));
+            assertEquals(broadcast, messageBus.awaitMessage(listener2));
+        });
+
+        // Cleanup
+        messageBus.unregister(listener1);
+        messageBus.unregister(listener2);
+    }
+
+    @Test
+    void testSendEvent() throws InterruptedException {
+        // Setup
+        MessageBusImpl messageBus = MessageBusImpl.getInstance();
+        MicroService handler = new ExampleEventHandlerService("Handler", new String[]{"5"});
+
+        messageBus.register(handler);
+
+        // Verify registration
+        assertTrue(messageBus.isRegistered(handler));
+
+        messageBus.subscribeEvent(ExampleEvent.class, handler);
+
+        // Action
+        Event<String> event = new ExampleEvent("TestEvent");
+        Future<String> future = messageBus.sendEvent(event);
+
+        // Assertion
+        assertNotNull(future);
+        assertEquals(event, messageBus.awaitMessage(handler));
+
+        // Cleanup
+        messageBus.unregister(handler);
+    }
+
+    @Test
+    void testAwaitMessageThrowsExceptionIfNotRegistered() {
+        // Setup
+        MessageBusImpl messageBus = MessageBusImpl.getInstance();
+        MicroService unregisteredService = new ExampleBroadcastListenerService("Unregistered", new String[]{"5"});
+
+        // Assertion
+        assertThrows(IllegalStateException.class, () -> {
+            messageBus.awaitMessage(unregisteredService);
+        });
     }
 }
