@@ -62,7 +62,7 @@ public class LiDarWorkerTracker {
         List<StampedCloudPoints> cloudPointsList = liDarDataBase.getCloudPoints();
         for (StampedCloudPoints stampedCloudPoints : cloudPointsList) {
             if (stampedCloudPoints.getId().equals(id) && stampedCloudPoints.getTime() == time) {
-                return stampedCloudPoints.getCloudPoints();
+                return stampedCloudPoints.listToCloudPoints();
             }
         }
         return new ArrayList<>(); // Return an empty list if no match is found

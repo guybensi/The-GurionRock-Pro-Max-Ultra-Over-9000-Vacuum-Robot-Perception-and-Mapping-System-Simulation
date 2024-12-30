@@ -58,12 +58,14 @@ public class LiDarService extends MicroService {
         });
 
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
-        //----------------------fill- what should we do here 
+            if (broadcast.getSenderId() == "TimeService"){
+                terminate();
+                sendBroadcast(new TerminatedBroadcast(getName()));  
+            }
         });
         subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
             terminate();
             sendBroadcast(new TerminatedBroadcast(getName()));
-        //should we do more?
         });
     
         //--------------------לוודא את עניין הזמנים שוב

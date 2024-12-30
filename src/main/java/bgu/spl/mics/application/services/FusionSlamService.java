@@ -45,17 +45,7 @@ public class FusionSlamService extends MicroService {
 
         // Register for TickBroadcast
         subscribeBroadcast(TickBroadcast.class, broadcast -> {
-            /* 
-            if (broadcast.isFinalTick()) {
-                terminate();
-                // Generate output file
-                Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
-                List<Pose> poses = new ArrayList<>(); // Populate if isError = true
-                fusionSlam.generateOutputFile("output_file.json", false, null, null, lastFrames, poses);// איפה הקובץ?
-                // איך מכבים את שאר הסרוויסים
-            }
-            */
-            ////-------לבדוק אם צריך לעדכן זמנים כי פיוזן סלאם לא מתשתשת בזמן ולבדוק final tick
+           
         });
 
         // Register for TerminatedBroadcast
@@ -73,7 +63,7 @@ public class FusionSlamService extends MicroService {
         subscribeBroadcast(CrashedBroadcast.class, broadcast -> {
             terminate();
             // Generate output file with errors
-            boolean isError = false; // Set to true if an error occurred
+            boolean isError = true; // Set to true if an error occurred
             String errorDescription = broadcast.getErrorMessage(); // Populate if isError = true
             String faultySensor = broadcast.getSenderId(); // Populate if isError = true
             Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true

@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 //import java.util.List;
 import java.util.Queue;
 
+import bgu.spl.mics.Broadcast;
 //import bgu.spl.mics.Broadcast;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.CrashedBroadcast;
@@ -90,7 +91,10 @@ public class CameraService extends MicroService {
 //--------------------------------------זה לא נכון צריך לתקן ולהבין מה לעשות עם ההרשמות האלו ------------------------------------------------------------
         // Subscribe to TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
-            // what should we do here? אנחנו מזניחים את זב ומתקדמים הלא
+            if (broadcast.getSenderId() == "TimeService"){
+                terminate();
+                sendBroadcast(new TerminatedBroadcast(getName()));  
+            }
         });
         // Subscribe to TerminatedBroadcast
         subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
