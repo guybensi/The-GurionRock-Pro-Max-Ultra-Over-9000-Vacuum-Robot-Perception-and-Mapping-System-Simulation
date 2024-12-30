@@ -39,6 +39,10 @@ public class FusionSlam {
         return posesByTime.get(time);
     }
 
+    public void setserviceCounter(int count){
+        this.serviceCounter = count;
+    }
+
     /**
      * Processes a tracked object event to update or add landmarks.
      *

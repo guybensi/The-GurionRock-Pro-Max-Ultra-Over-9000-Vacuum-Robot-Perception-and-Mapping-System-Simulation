@@ -53,6 +53,7 @@ public class FusionSlamService extends MicroService {
             fusionSlam.decreaseServiceCounter();
             if (fusionSlam.getserviceCounter() == 0) {
                 // Generate output file
+                terminate();
                 Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
                 List<Pose> poses = new ArrayList<>(); // Populate if isError = true
                 fusionSlam.generateOutputFile("output_file.json", false, null, null, lastFrames, poses);// איפה הקובץ?
