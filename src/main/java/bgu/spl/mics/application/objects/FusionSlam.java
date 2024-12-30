@@ -1,6 +1,11 @@
 package bgu.spl.mics.application.objects;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 
 /**
@@ -161,5 +166,37 @@ public class FusionSlam {
     }
     public void decreaseServiceCounter() {
         this.serviceCounter--;
-    }   
+    } 
+    
+    public void generateOutputFile(String filePath, boolean isError, String errorDescription, String faultySensor, Map<String, Object> lastFrames, List<Pose> poses) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        Map<String, Object> outputData = new HashMap<>();
+
+        // Add statistics
+        StatisticalFolder stats = StatisticalFolder.getInstance();
+        Map<String, Integer> statistics = new HashMap<>();
+        statistics.put("systemRuntime", stats.getSystemRuntime());
+        statistics.put("numDetectedObjects", stats.getNumDetectedObjects());
+        statistics.put("numTrackedObjects", stats.getNumTrackedObjects());
+        statistics.put("numLandmarks", stats.getNumLandmarks());
+        outputData.put("statistics", statistics);
+
+        // Add landmarks (world map)
+        outputData.put("landMarks", getLandmarks());
+
+        // Handle error-specific fields
+        if (isError) {
+            outputData.put("Error", errorDescription);
+            outputData.put("faultySensor", faultySensor);
+            outputData.put("lastFrames", lastFrames);
+            outputData.put("poses", poses);
+        }
+
+        // Write JSON to file
+        try (FileWriter writer = new FileWriter(filePath)) {
+            gson.toJson(outputData, writer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
