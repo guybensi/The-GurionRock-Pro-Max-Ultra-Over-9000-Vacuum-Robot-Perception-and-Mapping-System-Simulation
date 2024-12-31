@@ -34,7 +34,9 @@ import java.util.concurrent.*;
             eventSubscribers.putIfAbsent(type, new LinkedList<>());
             Queue <MicroService> subscribers = eventSubscribers.get(type);
             synchronized(subscribers){
-                subscribers.add(m);
+                if (!subscribers.contains(m)) {  // מוודא שהמיקרו-שירות לא נרשם פעמיים
+                    subscribers.add(m);
+                }
             }
         }
 
@@ -42,7 +44,9 @@ import java.util.concurrent.*;
         public void subscribeBroadcast(Class<? extends Broadcast> type, MicroService m) {
             broadcastSubscribers.putIfAbsent(type, new ArrayList<>());
             List<MicroService> subscribers = broadcastSubscribers.get(type);
-            subscribers.add(m);
+            if (!subscribers.contains(m)) {  // מוודא שהמיקרו-שירות לא נרשם פעמיים
+                subscribers.add(m);
+            }
             
         }
 
@@ -73,7 +77,7 @@ import java.util.concurrent.*;
                         try {
                             microServiceQueues.get(m).put(b);
                         } catch (InterruptedException e) {
-                            e.printStackTrace();
+                            Thread.currentThread().interrupt();
                         }
                     }
                 
@@ -110,13 +114,12 @@ import java.util.concurrent.*;
         public <T> Future<T> sendEvent(Event<T> e) {
             // בודק אם יש מנויים לאירוע מסוג זה
             Queue <MicroService> subscribers = eventSubscribers.get(e.getClass());
+            if (subscribers == null || subscribers.isEmpty()) {
+                return null;
+            }
             // אם אין מנויים, מחזיר null
             MicroService selectedService;
             synchronized(subscribers){
-                if (subscribers == null || subscribers.isEmpty()) {
-                    return null;
-                }
-
                 // בוחר מיקרו-שירות לשלוח אליו את האירוע (בחרנו כאן את הראשון ברשימה)
                 selectedService = subscribers.poll(); // במימוש זה, בחרנו את המיקרו-שירות הראשון
                 if (selectedService != null) {
@@ -131,7 +134,7 @@ import java.util.concurrent.*;
                 // שולחים את האירוע למיקרו-שירות הנבחר
                 microServiceQueues.get(selectedService).put(e);
             } catch (InterruptedException ex) {
-                ex.printStackTrace();
+                Thread.currentThread().interrupt();
             }
 
             // מחזירים את ה-Future של האירוע
@@ -197,9 +200,10 @@ import java.util.concurrent.*;
 
         // פונקציה 5: בודקת אם המיקרו-שירות מנוי לאירוע מסוג Event
         public boolean isSubscribedToEvent(Class<? extends Event<?>> type, MicroService listener) {
-            List<MicroService> subscribers = broadcastSubscribers.get(type);
-                return subscribers != null && subscribers.contains(listener);
+            Queue<MicroService> subscribers = eventSubscribers.get(type);
+            return subscribers != null && subscribers.contains(listener);
         }
+        
         
         // פונקציה 6: מחזירה את מספר המנויים לאירוע מסוג Event
         public int getNumberOfSubscribersToEvent(Class<? extends Event<?>> type) {
