@@ -145,13 +145,13 @@ import java.util.concurrent.*;
         public void unregister(MicroService m) {
                 microServiceQueues.remove(m);
                 for (Queue <MicroService> subscribers : eventSubscribers.values()) {
-                    synchronized(subscribers){ ///אולי לבדוק בכלל אם שייך אליו לפני שעושים רימוב?
+                    synchronized(subscribers){ 
                         subscribers.remove(m);
                     }
                 }
                 for (List<MicroService> subscribers : broadcastSubscribers.values()) {
-                    subscribers.remove(m);///אולי לבדוק בכלל אם שייך אליו לפני שעושים רימוב?
-                }////למה לא עשינו כאן גם סנכרון?
+                    subscribers.remove(m);
+                }
         }
 
         /**
@@ -196,13 +196,13 @@ import java.util.concurrent.*;
         }
 
         // פונקציה 5: בודקת אם המיקרו-שירות מנוי לאירוע מסוג Event
-        public boolean isSubscribedToEvent(Class<? extends Event> type, MicroService listener) {
+        public boolean isSubscribedToEvent(Class<? extends Event<?>> type, MicroService listener) {
             List<MicroService> subscribers = broadcastSubscribers.get(type);
                 return subscribers != null && subscribers.contains(listener);
         }
         
         // פונקציה 6: מחזירה את מספר המנויים לאירוע מסוג Event
-        public int getNumberOfSubscribersToEvent(Class<? extends Event> type) {
+        public int getNumberOfSubscribersToEvent(Class<? extends Event<?>> type) {
             List<MicroService> subscribers = broadcastSubscribers.get(type);
             if (subscribers == null) {
                 return 0;

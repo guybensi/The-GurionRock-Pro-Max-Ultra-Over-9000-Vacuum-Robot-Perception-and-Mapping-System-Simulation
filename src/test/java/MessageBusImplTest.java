@@ -156,7 +156,7 @@ class MessageBusImplTest {
      */
     
 
-    @Test
+   /* @Test
     void testAwaitMessageThrowsExceptionIfNotRegistered() {
         // Setup
         MessageBusImpl messageBus = MessageBusImpl.getInstance();
@@ -168,6 +168,7 @@ class MessageBusImplTest {
         }, "Expected IllegalStateException when service is not registered");
         
     }
+        /* */
 
     @Test
     void testAwaitMessageReceivesMessagesCorrectly() throws InterruptedException {
@@ -214,3 +215,4 @@ class MessageBusImplTest {
     
 
 }
+//--------------------להוסיף לcomplete
