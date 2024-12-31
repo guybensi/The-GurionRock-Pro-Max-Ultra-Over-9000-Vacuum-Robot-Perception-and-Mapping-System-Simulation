@@ -80,6 +80,27 @@ import java.util.concurrent.*;
             }
         }
 
+        /*@Override//////////////אולי פונקציה חדשה?
+        public void sendBroadcast(Broadcast b) {
+            List<MicroService> subscribers = broadcastSubscribers.get(b.getClass());
+            if (subscribers != null) {
+                 for (MicroService m : subscribers) {
+                    if (!microServiceQueues.containsKey(m)) {
+                     // מוודאים שהמיקרו-שירות רשום לפני שליחה
+                    throw new IllegalStateException("MicroService " + m.getName() + " is not registered.");
+                    }
+                    try {
+                        microServiceQueues.get(m).put(b);
+                    } catch (InterruptedException e) {
+                     Thread.currentThread().interrupt();  // שימו לב להחזיר את הדגל של ההפרעה
+                     throw new RuntimeException("Broadcast delivery interrupted", e);
+                    }
+                }
+            }
+        }
+        */
+
+
         
         /**
          * שולח אירוע למיקרו-שירות שנרשם אליו (אם יש מנוי).
@@ -124,13 +145,13 @@ import java.util.concurrent.*;
         public void unregister(MicroService m) {
                 microServiceQueues.remove(m);
                 for (Queue <MicroService> subscribers : eventSubscribers.values()) {
-                    synchronized(subscribers){
+                    synchronized(subscribers){ ///אולי לבדוק בכלל אם שייך אליו לפני שעושים רימוב?
                         subscribers.remove(m);
                     }
                 }
                 for (List<MicroService> subscribers : broadcastSubscribers.values()) {
-                    subscribers.remove(m);
-                }
+                    subscribers.remove(m);///אולי לבדוק בכלל אם שייך אליו לפני שעושים רימוב?
+                }////למה לא עשינו כאן גם סנכרון?
         }
 
         /**
@@ -140,11 +161,64 @@ import java.util.concurrent.*;
         @Override
         public Message awaitMessage(MicroService m) throws InterruptedException {
             BlockingQueue<Message> queue = microServiceQueues.get(m);
+            if (queue == null) {////////////////////////////////////////////////////////אורי הוסיפה שינוי 
+                throw new IllegalStateException("MicroService " + m.getName() + " is not registered.");
+            }
             return queue.take(); // Blocks until a message is available
         }
-    
 
+        
+        //-------------------------------פונקציות עזר לטסטים----------------------------------------
+        // פונקציה 1: בודקת אם המיקרו-שירות רשום
+        public boolean isRegistered(MicroService micro) {
+            return microServiceQueues.containsKey(micro);
+         }
 
-	
+         // פונקציה 2: מחזירה את מספר המיקרו-שירותים הרשומים
+         public int getNumberOfRegisters() {
+            return microServiceQueues.size();
+        }
+
+        // פונקציה 3: בודקת אם המיקרו-שירות מנוי לאירוע מסוג Broadcast
+         public boolean isSubscribedToBroad(Class<? extends Broadcast> type, MicroService listener) {
+            List<MicroService> subscribers = broadcastSubscribers.get(type);
+            return subscribers != null && subscribers.contains(listener);
+        }
+
+        // פונקציה 4: מחזירה את מספר המנויים לאירוע מסוג Broadcast
+        public int getNumberOfSubscribersToBroad(Class<? extends Broadcast> type) {
+            List<MicroService> subscribers = broadcastSubscribers.get(type);
+            if (subscribers == null) {
+                return 0;
+            } else {
+                return subscribers.size();
+            }
+        }
+
+        // פונקציה 5: בודקת אם המיקרו-שירות מנוי לאירוע מסוג Event
+        public boolean isSubscribedToEvent(Class<? extends Event> type, MicroService listener) {
+            List<MicroService> subscribers = broadcastSubscribers.get(type);
+                return subscribers != null && subscribers.contains(listener);
+        }
+        
+        // פונקציה 6: מחזירה את מספר המנויים לאירוע מסוג Event
+        public int getNumberOfSubscribersToEvent(Class<? extends Event> type) {
+            List<MicroService> subscribers = broadcastSubscribers.get(type);
+            if (subscribers == null) {
+                return 0;
+            } else {
+                return subscribers.size();
+            }
+        }
+        //פונקציה 7
+        public int getQueueSize(MicroService m) {
+            BlockingQueue<Message> queue = microServiceQueues.get(m);
+            if (queue == null) {
+                return 0;
+            } else {
+                return queue.size();
+            }
+        }
+        
 
 }
