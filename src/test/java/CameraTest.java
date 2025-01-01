@@ -1,17 +1,10 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import bgu.spl.mics.application.objects.Camera;
-import bgu.spl.mics.application.objects.DetectedObject;
 import bgu.spl.mics.application.objects.STATUS;
 import bgu.spl.mics.application.objects.StampedDetectedObject;
 
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-
-//import java.util.ArrayList;
-//import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -21,7 +14,7 @@ class CameraTest {
 
     @BeforeEach
     void setup() {
-        java.net.URL resource = getClass().getClassLoader().getResource("example_input.json");
+        java.net.URL resource = getClass().getClassLoader().getResource("camera_example_input.json");
         assertNotNull(resource, "The file 'example_input.json' was not found in src/test/resources.");
         System.out.println("File found: " + resource.getPath());
     

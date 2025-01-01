@@ -84,28 +84,6 @@ import java.util.concurrent.*;
                 
             }
         }
-
-        /*@Override//////////////אולי פונקציה חדשה?
-        public void sendBroadcast(Broadcast b) {
-            List<MicroService> subscribers = broadcastSubscribers.get(b.getClass());
-            if (subscribers != null) {
-                 for (MicroService m : subscribers) {
-                    if (!microServiceQueues.containsKey(m)) {
-                     // מוודאים שהמיקרו-שירות רשום לפני שליחה
-                    throw new IllegalStateException("MicroService " + m.getName() + " is not registered.");
-                    }
-                    try {
-                        microServiceQueues.get(m).put(b);
-                    } catch (InterruptedException e) {
-                     Thread.currentThread().interrupt();  // שימו לב להחזיר את הדגל של ההפרעה
-                     throw new RuntimeException("Broadcast delivery interrupted", e);
-                    }
-                }
-            }
-        }
-        */
-
-
         
         /**
          * שולח אירוע למיקרו-שירות שנרשם אליו (אם יש מנוי).
@@ -142,9 +120,6 @@ import java.util.concurrent.*;
             // מחזירים את ה-Future של האירוע
             return future;
         }
-
-    
-        
 
         @Override
         public void unregister(MicroService m) {

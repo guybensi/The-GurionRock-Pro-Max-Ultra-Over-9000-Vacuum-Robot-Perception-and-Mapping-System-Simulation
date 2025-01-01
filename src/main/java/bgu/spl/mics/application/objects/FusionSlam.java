@@ -125,7 +125,7 @@ public class FusionSlam {
      * @param pose             The current pose of the robot.
      * @return A list of transformed global coordinates.
      */
-    private List<CloudPoint> transformToGlobal(List<CloudPoint> localCoordinates, Pose pose) {
+    public List<CloudPoint> transformToGlobal(List<CloudPoint> localCoordinates, Pose pose) {//לזכור להזיר לפרייבט
         List<CloudPoint> globalCoordinates = new ArrayList<>();
 
         double yawRadians = Math.toRadians(pose.getYaw());
@@ -203,4 +203,17 @@ public class FusionSlam {
             e.printStackTrace();
         }
     }
+//-------------------פונקציות לבדיקות
+    public void clearLandmarks() {
+        landmarks.clear();
+    }
+
+    public void addLandmark(LandMark landmark) {
+        landmarks.add(landmark);
+    }
+    public List<LandMark> getLandmarksMod() {
+        return new ArrayList<>(landmarks); // מחזיר עותק שניתן לערוך
+    }
+    
+
 }

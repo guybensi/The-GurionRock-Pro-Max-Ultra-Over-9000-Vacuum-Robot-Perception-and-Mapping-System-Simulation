@@ -7,17 +7,17 @@ package bgu.spl.mics.application.objects;
 public class Pose {
 
     // Fields
+    private int time;    
     private float x;    
     private float y;    
-    private float yaw;  
-    private int time;   
+    private float yaw;   
 
     // Constructor to initialize the Pose object
-    public Pose(float x, float y, float yaw, int time) {
+    public Pose(int time, float x, float y, float yaw) {
+        this.time = time;
         this.x = x;
         this.y = y;
         this.yaw = yaw;
-        this.time = time;
     }
 
     public float getX() {

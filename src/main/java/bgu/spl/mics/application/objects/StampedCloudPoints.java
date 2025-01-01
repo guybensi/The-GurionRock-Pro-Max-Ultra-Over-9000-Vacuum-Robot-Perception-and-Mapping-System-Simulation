@@ -9,13 +9,13 @@ import java.util.List;
  */
 public class StampedCloudPoints {
 
+    private int time; 
     private String id; 
-    private int time;
     private List<List<Double>> cloudPoints; // Updated to List<List<Double>>
 
-    public StampedCloudPoints(String id, int time, List<List<Double>> cloudPoints) {
-        this.id = id;
+    public StampedCloudPoints(int time, String id, List<List<Double>> cloudPoints) {
         this.time = time;
+        this.id = id;
         this.cloudPoints = cloudPoints;
     }
 
