@@ -347,6 +347,40 @@ class MessageBusImplTest {
         executor.shutdown();
         executor.awaitTermination(5, TimeUnit.SECONDS);
     }
+    @Test
+    void testUnregisterRemovesAllReferences() {
+        // Setup
+        MessageBusImpl messageBus = MessageBusImpl.getInstance();
+        MicroService service = new ExampleBroadcastListenerService("Service", new String[]{"5"});
+        messageBus.register(service);
+
+        // Subscribe to an event and a broadcast
+        messageBus.subscribeEvent(ExampleEvent.class, service);
+        messageBus.subscribeBroadcast(ExampleBroadcast.class, service);
+
+        // Verify subscriptions before unregistering
+        assertTrue(messageBus.isRegistered(service), "Service should be registered before unregistering.");
+        assertTrue(messageBus.isSubscribedToEvent(ExampleEvent.class, service),
+                "Service should be subscribed to ExampleEvent before unregistering.");
+        assertTrue(messageBus.isSubscribedToBroad(ExampleBroadcast.class, service),
+                "Service should be subscribed to ExampleBroadcast before unregistering.");
+
+        // Unregister the service
+        messageBus.unregister(service);
+
+        // Verify the service is no longer registered
+        assertFalse(messageBus.isRegistered(service), "Service should not be registered after unregistering.");
+
+        // Verify the service is no longer subscribed to any events or broadcasts
+        assertFalse(messageBus.isSubscribedToEvent(ExampleEvent.class, service),
+                "Service should not be subscribed to ExampleEvent after unregistering.");
+        assertFalse(messageBus.isSubscribedToBroad(ExampleBroadcast.class, service),
+                "Service should not be subscribed to ExampleBroadcast after unregistering.");
+
+        // Verify the message queue for the service is removed
+        assertThrows(IllegalStateException.class, () -> messageBus.awaitMessage(service),
+                "Expected IllegalStateException when awaiting message for an unregistered service.");
+    }
 
 }
 

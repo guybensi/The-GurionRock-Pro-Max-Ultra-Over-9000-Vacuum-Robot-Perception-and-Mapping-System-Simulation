@@ -1,9 +1,12 @@
 package bgu.spl.mics.application.services;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+
 
 import bgu.spl.mics.*;
 import bgu.spl.mics.application.objects.*;
@@ -15,6 +18,9 @@ import bgu.spl.mics.application.messages.*;
  */
 public class FusionSlamService extends MicroService {
     private final FusionSlam fusionSlam;
+private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects = 
+    new PriorityQueue<>(Comparator.comparingInt(e -> e.getTrackedObjects().get(0).getTime()));
+
 
     /**
      * Constructor for FusionSlamService.
@@ -33,14 +39,26 @@ public class FusionSlamService extends MicroService {
     protected void initialize() {
         // Register for TrackedObjectsEvent
         subscribeEvent(TrackedObjectsEvent.class, event -> {
-            fusionSlam.processTrackedObjects(event.getTrackedObjects());
-            complete(event, true);
+            if (fusionSlam.getPoseAtTime(event.getTrackedObjects().get(0).getTime())  != null){
+                fusionSlam.processTrackedObjects(event.getTrackedObjects());
+                complete(event, true);
+            }
+            else{
+                System.out.println("this event had no pose");
+                waitingTrackedObjects.add(event);
+            }
+            
         });
 
         // Register for PoseEvent
         subscribeEvent(PoseEvent.class, event -> {
             fusionSlam.addPose(event.getPose());
             complete(event, true);
+            while (!waitingTrackedObjects.isEmpty() && fusionSlam.getPoseAtTime(waitingTrackedObjects.peek().getTime()) != null){
+                TrackedObjectsEvent e = waitingTrackedObjects.poll(); 
+                fusionSlam.processTrackedObjects(e.getTrackedObjects());
+                complete(e, true);
+            }
         });
 
         // Register for TickBroadcast

@@ -1,11 +1,14 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import bgu.spl.mics.application.messages.PoseEvent;
+import bgu.spl.mics.application.messages.TrackedObjectsEvent;
 import bgu.spl.mics.application.objects.CloudPoint;
 import bgu.spl.mics.application.objects.FusionSlam;
 import bgu.spl.mics.application.objects.LandMark;
 import bgu.spl.mics.application.objects.Pose;
 import bgu.spl.mics.application.objects.TrackedObject;
+import bgu.spl.mics.application.services.FusionSlamService;
 
 import java.util.Arrays;
 import java.util.List;
@@ -19,24 +22,37 @@ public class FusionSlamTest {
     @BeforeEach
     void setup() {
         fusionSlam = FusionSlam.getInstance();
-        fusionSlam.clearLandmarks(); // ניקוי ה־landmarks במצב הנכון
+        fusionSlam.clearLandmarks();
     }
 
     @Test
     void testGlobalTransformation() {
-        // בדיקה להמרה לגלובלי
         Pose pose = new Pose(1, 1.0f, 1.0f, 45.0f);
         List<CloudPoint> localCoordinates = Arrays.asList(
                 new CloudPoint(1.0, 1.0),
-                new CloudPoint(2.0, 2.0)
+                new CloudPoint(2.0, 2.0),
+                new CloudPoint(0.0, 1.0) // נקודה נוספת
         );
-
+    
         List<CloudPoint> globalCoordinates = fusionSlam.transformToGlobal(localCoordinates, pose);
-
+    
         assertNotNull(globalCoordinates, "Global transformation result should not be null.");
-        assertEquals(2, globalCoordinates.size(), "The number of global coordinates should match the local coordinates.");
-        // בדיקות נוספות לתוצאה אם נדרשות
+        assertEquals(3, globalCoordinates.size(), "The number of global coordinates should match the local coordinates.");
+    
+        // בדיקה נגד ערכים צפויים
+        double sqrt2 = Math.sqrt(2) / 2;
+        CloudPoint expectedPoint1 = new CloudPoint(1.0 + sqrt2 - sqrt2, 1.0 + sqrt2 + sqrt2);
+        CloudPoint expectedPoint2 = new CloudPoint(1.0 + 2 * sqrt2 - 2 * sqrt2, 1.0 + 2 * sqrt2 + 2 * sqrt2);
+        CloudPoint expectedPoint3 = new CloudPoint(1.0 + 0 * sqrt2 - 1 * sqrt2, 1.0 + 0 * sqrt2 + 1 * sqrt2);
+    
+        assertEquals(expectedPoint1.getX(), globalCoordinates.get(0).getX(), 0.0001, "First point X mismatch");
+        assertEquals(expectedPoint1.getY(), globalCoordinates.get(0).getY(), 0.0001, "First point Y mismatch");
+        assertEquals(expectedPoint2.getX(), globalCoordinates.get(1).getX(), 0.0001, "Second point X mismatch");
+        assertEquals(expectedPoint2.getY(), globalCoordinates.get(1).getY(), 0.0001, "Second point Y mismatch");
+        assertEquals(expectedPoint3.getX(), globalCoordinates.get(2).getX(), 0.0001, "Third point X mismatch");
+        assertEquals(expectedPoint3.getY(), globalCoordinates.get(2).getY(), 0.0001, "Third point Y mismatch");
     }
+    
 
     @Test
     void testAddNewLandmark() {
@@ -85,18 +101,53 @@ public class FusionSlamTest {
     }
 
     @Test
-    void testProcessTrackedObjectsWithNoPose() {
+    void testProcessTrackedObjectsWithPose() {
+        // יצירת השירות והאובייקטים הנדרשים
+        FusionSlam fusionSlam = FusionSlam.getInstance();
+        // הוספת פוזה מתאימה מראש
+        Pose pose = new Pose(2, 1.0f, 0.0f, 0.0f); // פוזה לזמן 2
+        fusionSlam.addPose(pose); // הוספת הפוזה ישירות ל-FusionSlam
+
+        // יצירת אובייקט עם פוזה מתאימה
         List<CloudPoint> coordinates = Arrays.asList(
                 new CloudPoint(1.0, 1.0),
                 new CloudPoint(2.0, 2.0)
         );
-
         TrackedObject trackedObject = new TrackedObject("Landmark1", 2, "Test Landmark", coordinates);
+
+        // קריאה ישירה לפונקציה ב-FusionSlam
         fusionSlam.processTrackedObjects(Arrays.asList(trackedObject));
 
+        // ווידוא שה-Landmark נוסף
         List<LandMark> landmarks = fusionSlam.getLandmarksMod();
-        assertEquals(0, landmarks.size(), "No landmark should be added if there is no pose.");
+        assertEquals(1, landmarks.size(), "One landmark should be added.");
+        assertEquals("Landmark1", landmarks.get(0).getId(), "The added landmark should have the correct ID.");
+        assertEquals(2, landmarks.get(0).getCoordinates().size(), "The landmark should have the correct number of coordinates.");
     }
+
+    @Test
+    void testProcessTrackedObjectsWithoutPose() {
+        // יצירת השירות והאובייקטים הנדרשים
+        FusionSlam fusionSlam = FusionSlam.getInstance();
+
+        // ווידוא שהמערכת מתחילה במצב נקי
+        fusionSlam.clearLandmarks();
+
+        // יצירת אובייקט עם זמן שאין עבורו פוזה
+        List<CloudPoint> coordinates = Arrays.asList(
+                new CloudPoint(1.0, 1.0),
+                new CloudPoint(2.0, 2.0)
+        );
+        TrackedObject trackedObject = new TrackedObject("Landmark1", 3, "Test Landmark", coordinates); // זמן 3 ללא פוזה
+
+        // קריאה ישירה לפונקציה ב-FusionSlam
+        fusionSlam.processTrackedObjects(Arrays.asList(trackedObject));
+
+        // ווידוא שאין Landmarks שנוספו
+        List<LandMark> landmarks = fusionSlam.getLandmarksMod();
+        assertEquals(0, landmarks.size(), "No landmark should be added if no pose is available.");
+    }
+
 
     @Test
     void testProcessTrackedObjectsWithMultipleObjects() {

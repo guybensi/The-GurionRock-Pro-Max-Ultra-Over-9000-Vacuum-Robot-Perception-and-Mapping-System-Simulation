@@ -33,6 +33,7 @@ public class FusionSlam {
      */
     public void addPose(Pose pose) {
         posesByTime.put(pose.getTime(), pose); // Add the pose to the map
+
     }
     
     public Pose getPoseAtTime(int time) {
@@ -52,20 +53,21 @@ public class FusionSlam {
         for (TrackedObject obj : trackedObjects) {
             String id = obj.getId();
             Pose relaventPose = getPoseAtTime(obj.getTime());
-            if (relaventPose != null){
-                List<CloudPoint> globalCoordinates = transformToGlobal(obj.getCoordinates(), relaventPose);
-                LandMark existingLandmark = findLandMarkById(id);
-                if (existingLandmark != null) {
-                    // Update existing landmark by averaging coordinates
-                    updateLandmarkCoordinates(existingLandmark, globalCoordinates);
-                } else {
-                    // Add new landmark
-                    LandMark newLandmark = new LandMark(id, obj.getDescription(), globalCoordinates);
-                    landmarks.add(newLandmark);
-                    StatisticalFolder.getInstance().updateNumLandmarks(1);
-                }
+            if (relaventPose == null) {// לא אמור לקרות, רק בשביל הבדיקות
+                System.out.println("No pose found for time: " + obj.getTime() + ". Skipping object: " + id);
+                continue; // דילוג על האובייקט אם אין פוזה מתאימה
             }
-            
+            List<CloudPoint> globalCoordinates = transformToGlobal(obj.getCoordinates(), relaventPose);
+            LandMark existingLandmark = findLandMarkById(id);
+            if (existingLandmark != null) {
+                // Update existing landmark by averaging coordinates
+                updateLandmarkCoordinates(existingLandmark, globalCoordinates);
+            } else {
+                // Add new landmark
+                LandMark newLandmark = new LandMark(id, obj.getDescription(), globalCoordinates);
+                landmarks.add(newLandmark);
+                StatisticalFolder.getInstance().updateNumLandmarks(1);
+            }     
         }
          
     }
@@ -125,22 +127,25 @@ public class FusionSlam {
      * @param pose             The current pose of the robot.
      * @return A list of transformed global coordinates.
      */
-    public List<CloudPoint> transformToGlobal(List<CloudPoint> localCoordinates, Pose pose) {//לזכור להזיר לפרייבט
+    public List<CloudPoint> transformToGlobal(List<CloudPoint> localCoordinates, Pose pose) {
         List<CloudPoint> globalCoordinates = new ArrayList<>();
-
+    
         double yawRadians = Math.toRadians(pose.getYaw());
         double cosYaw = Math.cos(yawRadians);
         double sinYaw = Math.sin(yawRadians);
-
+    
         for (CloudPoint point : localCoordinates) {
-            double globalX = (double) (point.getX() * cosYaw - point.getY() * sinYaw + pose.getX());
-            double globalY = (double) (point.getX() * sinYaw + point.getY() * cosYaw + pose.getY());
-
+            // חישוב הקואורדינטות הגלובליות
+            double globalX = point.getX() * cosYaw - point.getY() * sinYaw + pose.getX();
+            double globalY = point.getX() * sinYaw + point.getY() * cosYaw + pose.getY();
+    
+            // הוספת הנקודה המחושבת
             globalCoordinates.add(new CloudPoint(globalX, globalY));
         }
-
+    
         return globalCoordinates;
     }
+    
 
     /**
      * Returns the list of landmarks.
@@ -212,7 +217,7 @@ public class FusionSlam {
         landmarks.add(landmark);
     }
     public List<LandMark> getLandmarksMod() {
-        return new ArrayList<>(landmarks); // מחזיר עותק שניתן לערוך
+        return new ArrayList<>(landmarks); 
     }
     
 
