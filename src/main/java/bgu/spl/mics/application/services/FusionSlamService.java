@@ -63,7 +63,7 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
 
         // Register for TickBroadcast
         subscribeBroadcast(TickBroadcast.class, broadcast -> {
-           
+           fusionSlam.setTick(broadcast.getTime());
         });
 
         // Register for TerminatedBroadcast
@@ -73,7 +73,7 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
                 // Generate output file
                 terminate();
                 Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
-                List<Pose> poses = new ArrayList<>(); // Populate if isError = true
+                List<Pose> poses = fusionSlam.getPosesUpToTick(fusionSlam.getTick()); // Populate if isError = true
                 fusionSlam.generateOutputFile("output_file.json", false, null, null, lastFrames, poses);// איפה הקובץ?
             }
         });
@@ -86,7 +86,7 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
             String errorDescription = broadcast.getErrorMessage(); // Populate if isError = true
             String faultySensor = broadcast.getSenderId(); // Populate if isError = true
             Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
-            List<Pose> poses = new ArrayList<>(); // Populate if isError = true
+            List<Pose> poses = fusionSlam.getPosesUpToTick(fusionSlam.getTick()); // Populate if isError = true
             fusionSlam.generateOutputFile("output_file.json", isError, errorDescription, faultySensor, lastFrames, poses);// איפה הקובץ?
         });
     }

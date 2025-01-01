@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * LiDarDataBase is a singleton class responsible for managing LiDAR data.
@@ -14,6 +15,7 @@ import java.util.List;
 public class LiDarDataBase {
 
     private List<StampedCloudPoints> cloudPoints;
+    private AtomicInteger counter = new AtomicInteger(0);
 
     private LiDarDataBase(String filePath) {
         this.cloudPoints = loadDataFromFile(filePath);
@@ -44,17 +46,30 @@ public class LiDarDataBase {
      */
 
 
-    private List<StampedCloudPoints> loadDataFromFile(String filePath) {
+     private List<StampedCloudPoints> loadDataFromFile(String filePath) {
         try (FileReader reader = new FileReader(filePath)) {
             Gson gson = new Gson();
-            return gson.fromJson(reader, new TypeToken<List<StampedCloudPoints>>() {}.getType());
+            List<StampedCloudPoints> data = gson.fromJson(reader, new TypeToken<List<StampedCloudPoints>>() {}.getType());
+            if (data != null) {
+                counter.set(data.size());  
+            }
+            return data;
         } catch (IOException e) {
-            return new ArrayList<>(); // Return an empty list in case of failure
+            return new ArrayList<>(); 
         }
     }
+    
+    
 
     public List<StampedCloudPoints> getCloudPoints() {
         return cloudPoints;
     }
-    //-----------------------פונקציה שמחזירה משהו שהמיקרו מבקש
+
+    public int decrementCounter() {
+        return counter.updateAndGet(value -> value > 0 ? value - 1 : 0);
+    }
+    
+    public int getCounter() {
+        return counter.get();
+    }
 }

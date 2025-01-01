@@ -24,6 +24,7 @@ public class FusionSlam {
     private ArrayList<LandMark> landmarks  = new ArrayList<>(); // Dynamic array of landmarks
     private Map<Integer, Pose> posesByTime = new HashMap<>(); // Map to hold poses by time
     private int serviceCounter = 0;
+    private int tick = 0;
     
     
     /**
@@ -38,6 +39,12 @@ public class FusionSlam {
     
     public Pose getPoseAtTime(int time) {
         return posesByTime.get(time);
+    }
+    public void setTick (int time){
+        this.tick = time;
+    }
+    public int getTick (){
+        return tick;
     }
 
     public void setserviceCounter(int count){
@@ -180,7 +187,7 @@ public class FusionSlam {
     public void generateOutputFile(String filePath, boolean isError, String errorDescription, String faultySensor, Map<String, Object> lastFrames, List<Pose> poses) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         Map<String, Object> outputData = new HashMap<>();
-
+    
         // Add statistics
         StatisticalFolder stats = StatisticalFolder.getInstance();
         Map<String, Integer> statistics = new HashMap<>();
@@ -189,10 +196,14 @@ public class FusionSlam {
         statistics.put("numTrackedObjects", stats.getNumTrackedObjects());
         statistics.put("numLandmarks", stats.getNumLandmarks());
         outputData.put("statistics", statistics);
-
-        // Add landmarks (world map)
-        outputData.put("landMarks", getLandmarks());
-
+    
+        // Convert landMarks to Map<String, LandMark> for JSON
+        Map<String, LandMark> landMarksMap = new HashMap<>();
+        for (LandMark landmark : getLandmarks()) {
+            landMarksMap.put(landmark.getId(), landmark);
+        }
+        outputData.put("landMarks", landMarksMap);
+    
         // Handle error-specific fields
         if (isError) {
             outputData.put("Error", errorDescription);
@@ -200,7 +211,7 @@ public class FusionSlam {
             outputData.put("lastFrames", lastFrames);
             outputData.put("poses", poses);
         }
-
+    
         // Write JSON to file
         try (FileWriter writer = new FileWriter(filePath)) {
             gson.toJson(outputData, writer);
@@ -208,6 +219,21 @@ public class FusionSlam {
             e.printStackTrace();
         }
     }
+    
+
+    public List<Pose> getPosesUpToTick(int time) {
+        List<Pose> poses = new ArrayList<>();
+        for (Map.Entry<Integer, Pose> entry : posesByTime.entrySet()) {
+            if (entry.getKey() <= time) {
+                poses.add(entry.getValue());
+            } else {
+                break;
+            }
+        }
+        return poses;
+    }
+    
+    
 //-------------------פונקציות לבדיקות
     public void clearLandmarks() {
         landmarks.clear();

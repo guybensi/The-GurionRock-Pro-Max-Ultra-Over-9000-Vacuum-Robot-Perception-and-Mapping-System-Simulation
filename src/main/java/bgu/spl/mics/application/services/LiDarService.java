@@ -54,7 +54,11 @@ public class LiDarService extends MicroService {
                 sendEvent(readyEvent);
                 StatisticalFolder.getInstance().updateNumDetectedObjects(
                     readyEvent.getTrackedObjects().size());
-            }  
+            } 
+            if (eventQueue.isEmpty() && (lidarWorkerTracker.getStatus()==STATUS.DOWN)){
+                terminate();
+                sendBroadcast(new TerminatedBroadcast(getName()));    
+            } 
         });
 
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
@@ -68,7 +72,6 @@ public class LiDarService extends MicroService {
             sendBroadcast(new TerminatedBroadcast(getName()));
         });
     
-        //--------------------לוודא את עניין הזמנים שוב
         subscribeEvent(DetectObjectsEvent.class, event -> {
             if(lidarWorkerTracker.getStatus()==STATUS.UP){   
                 List<TrackedObject> TrackedObjects = lidarWorkerTracker.prosseingEvent(event.getStampedDetectedObjects());
@@ -80,7 +83,7 @@ public class LiDarService extends MicroService {
                     int designatedTime = event.getStampedDetectedObjects().getTime() + lidarWorkerTracker.getFrequency();
                     int currTime = lidarWorkerTracker.getCurrentTick();
                     TrackedObjectsEvent toSendEvent = (new TrackedObjectsEvent(event, event.getStampedDetectedObjects().getTime(), TrackedObjects, getName(), designatedTime));
-                    if (designatedTime <= currTime){ /////----------לבדוק תנאי ראשון
+                    if (designatedTime <= currTime){ 
                         complete(event, true);
                         sendEvent(toSendEvent);
                         StatisticalFolder.getInstance().updateNumTrackedObjects(TrackedObjects.size());
@@ -89,12 +92,12 @@ public class LiDarService extends MicroService {
                         eventQueue.add(toSendEvent);
                     }
                }
-               if (lidarWorkerTracker.getStatus() == STATUS.DOWN){//מתי זה הופך ללמטה???
+               if (eventQueue.isEmpty() && lidarWorkerTracker.getStatus() == STATUS.DOWN){
                     terminate();
                     sendBroadcast(new TerminatedBroadcast(getName()));  
                 }
             }
-            else{//down
+            else if (eventQueue.isEmpty()){
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));    
             }          
