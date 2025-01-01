@@ -64,6 +64,7 @@ import java.util.concurrent.*;
             Future<T> future = (Future<T>) eventFutures.get(e);
             if (future != null) {
                 future.resolve(result); // עדכון התוצאה
+                eventFutures.remove(e);
             }
         }
         
@@ -117,14 +118,15 @@ import java.util.concurrent.*;
             if (subscribers == null || subscribers.isEmpty()) {
                 return null;
             }
-            // אם אין מנויים, מחזיר null
             MicroService selectedService;
             synchronized(subscribers){
-                // בוחר מיקרו-שירות לשלוח אליו את האירוע (בחרנו כאן את הראשון ברשימה)
                 selectedService = subscribers.poll(); // במימוש זה, בחרנו את המיקרו-שירות הראשון
                 if (selectedService != null) {
                     subscribers.add(selectedService); // מעביר אותו לסוף התור
                 }
+            }
+            if (selectedService == null || !microServiceQueues.containsKey(selectedService)) {
+                return null; // No valid service to handle the event
             }
             Future<T> future = new Future<>();
             
@@ -164,7 +166,7 @@ import java.util.concurrent.*;
         @Override
         public Message awaitMessage(MicroService m) throws InterruptedException {
             BlockingQueue<Message> queue = microServiceQueues.get(m);
-            if (queue == null) {////////////////////////////////////////////////////////אורי הוסיפה שינוי 
+            if (queue == null){
                 throw new IllegalStateException("MicroService " + m.getName() + " is not registered.");
             }
             return queue.take(); // Blocks until a message is available
@@ -207,7 +209,7 @@ import java.util.concurrent.*;
         
         // פונקציה 6: מחזירה את מספר המנויים לאירוע מסוג Event
         public int getNumberOfSubscribersToEvent(Class<? extends Event<?>> type) {
-            List<MicroService> subscribers = broadcastSubscribers.get(type);
+            Queue<MicroService> subscribers = eventSubscribers.get(type); // Corrected to eventSubscribers
             if (subscribers == null) {
                 return 0;
             } else {

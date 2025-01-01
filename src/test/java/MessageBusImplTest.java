@@ -78,6 +78,8 @@ class MessageBusImplTest {
         assertFalse(messageBus.isSubscribedToEvent(ExampleEvent.class, Handler), 
             "Expected: Handler is no longer subscribed to ExampleEvent after unregister. Actual: Handler is still subscribed.");
     }
+    
+    
 
     @Test
     void testSendBroadcast() {
@@ -154,9 +156,10 @@ class MessageBusImplTest {
     /*רעיונות לעוד בדיקות שאולי אפשר להוסיף:
      * שני הנדלרים שרשומים ולוודא שהאירוע נכנס רק לתור הודעות של אחד מהם 
      */
+     
     
 
-   /* @Test
+    @Test
     void testAwaitMessageThrowsExceptionIfNotRegistered() {
         // Setup
         MessageBusImpl messageBus = MessageBusImpl.getInstance();
@@ -168,8 +171,8 @@ class MessageBusImplTest {
         }, "Expected IllegalStateException when service is not registered");
         
     }
-        /* */
-
+    
+ 
     @Test
     void testAwaitMessageReceivesMessagesCorrectly() throws InterruptedException {
         // Setup
@@ -212,7 +215,77 @@ class MessageBusImplTest {
         assertEquals(0, messageBus.getQueueSize(service), 
             "Queue size should be 0 after receiving all messages for service: " + service.getName());
     }
-    
 
+    @Test
+    void testCompleteUpdatesFutureCorrectly() {
+        // Setup
+        MessageBusImpl messageBus = MessageBusImpl.getInstance();
+        MicroService handler = new ExampleEventHandlerService("Handler", new String[]{"5"});
+        messageBus.register(handler);
+        messageBus.subscribeEvent(ExampleEvent.class, handler);
+        
+        Event<String> event = new ExampleEvent("TestEvent");
+        Future<String> future = messageBus.sendEvent(event);
+
+        // Pre-condition checks
+        assertNotNull(future, "Future should not be null after sending the event.");
+        assertFalse(future.isDone(), "Future should not be resolved before complete is called.");
+
+        // Action
+        String result = "Success";
+        messageBus.complete(event, result);
+
+        // Post-condition checks
+        assertTrue(future.isDone(), "Future should be resolved after complete is called.");
+        assertEquals(result, future.get(), "Future should return the correct result after resolution.");
+
+        // Cleanup
+        messageBus.unregister(handler);
+    }
+
+    @Test
+    void testCompleteWithNonExistentEventDoesNothing() {
+        // Setup
+        MessageBusImpl messageBus = MessageBusImpl.getInstance();
+        Event<String> nonExistentEvent = new ExampleEvent("NonExistentEvent");
+
+        // Action
+        // Attempt to complete an event that was not sent or subscribed to
+        assertDoesNotThrow(() -> {
+            messageBus.complete(nonExistentEvent, "ShouldNotThrow");
+        }, "Calling complete on a non-existent event should not throw exceptions.");
+    }
+
+    @Test
+    void testCompleteDoesNotAffectOtherEvents() {
+        // Setup
+        MessageBusImpl messageBus = MessageBusImpl.getInstance();
+        MicroService handler = new ExampleEventHandlerService("Handler", new String[]{"5"});
+        messageBus.register(handler);
+        messageBus.subscribeEvent(ExampleEvent.class, handler);
+
+        Event<String> event1 = new ExampleEvent("Event1");
+        Event<String> event2 = new ExampleEvent("Event2");
+
+        Future<String> future1 = messageBus.sendEvent(event1);
+        Future<String> future2 = messageBus.sendEvent(event2);
+
+        // Pre-condition checks
+        assertNotNull(future1, "Future1 should not be null after sending event1.");
+        assertNotNull(future2, "Future2 should not be null after sending event2.");
+        assertFalse(future1.isDone(), "Future1 should not be resolved before complete is called.");
+        assertFalse(future2.isDone(), "Future2 should not be resolved before complete is called.");
+
+        // Action
+        messageBus.complete(event1, "Result1");
+
+        // Post-condition checks
+        assertTrue(future1.isDone(), "Future1 should be resolved after complete is called.");
+        assertEquals("Result1", future1.get(), "Future1 should return the correct result after resolution.");
+        assertFalse(future2.isDone(), "Future2 should remain unresolved if complete is not called for it.");
+
+        // Cleanup
+        messageBus.unregister(handler);
+    }
 }
-//--------------------להוסיף לcompletmjnn
+
