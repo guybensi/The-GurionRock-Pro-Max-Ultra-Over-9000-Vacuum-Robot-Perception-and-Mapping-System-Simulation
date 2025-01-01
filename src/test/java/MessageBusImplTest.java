@@ -9,6 +9,15 @@ import org.junit.jupiter.api.Test;
 //import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 class MessageBusImplTest {
 
     @Test
@@ -287,5 +296,57 @@ class MessageBusImplTest {
         // Cleanup
         messageBus.unregister(handler);
     }
+    @Test
+    void testThreadSafetyWithEvents() throws InterruptedException {
+        MessageBusImpl messageBus = MessageBusImpl.getInstance();
+        int numServices = 20;
+        ExecutorService executor = Executors.newFixedThreadPool(numServices);
+
+        // Register services and subscribe to ExampleEvent
+        List<MicroService> services = new ArrayList<>();
+        for (int i = 0; i < numServices; i++) {
+            MicroService service = new ExampleEventHandlerService("Service" + i, new String[]{"5"});
+            messageBus.register(service);
+            messageBus.subscribeEvent(ExampleEvent.class, service);
+            services.add(service);
+        }
+
+        List<Event<String>> events = Arrays.asList(
+                new ExampleEvent("Event1"),
+                new ExampleEvent("Event2"),
+                new ExampleEvent("Event3")
+        );
+
+        // Send events in parallel
+        for (Event<String> event : events) {
+            executor.submit(() -> {
+                Future<String> future = messageBus.sendEvent(event);
+                assertNotNull(future, "Future should not be null for a valid event.");
+            });
+        }
+
+        // Validate each service processes at most one event in round-robin
+        Set<MicroService> processedServices = new HashSet<>();
+        for (int i = 0; i < events.size(); i++) {
+            for (MicroService service : services) {
+                if (processedServices.size() == events.size()) break;
+                Message message = messageBus.awaitMessage(service);
+                if (message instanceof ExampleEvent) {
+                    ExampleEvent receivedEvent = (ExampleEvent) message;
+                    assertTrue(events.contains(receivedEvent), "Received unexpected event.");
+                    processedServices.add(service);
+                }
+            }
+        }
+
+        // Ensure each event was processed by one service
+        assertEquals(events.size(), processedServices.size(), "Each event should be processed by one service.");
+
+        // Cleanup
+        services.forEach(messageBus::unregister);
+        executor.shutdown();
+        executor.awaitTermination(5, TimeUnit.SECONDS);
+    }
+
 }
 
