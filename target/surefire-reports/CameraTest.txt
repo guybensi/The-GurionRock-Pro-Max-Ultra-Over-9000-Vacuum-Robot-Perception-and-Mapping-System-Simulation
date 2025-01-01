@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
-Test set: MessageBusImplTest
+Test set: CameraTest
 -------------------------------------------------------------------------------
-Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.043 s -- in MessageBusImplTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.110 s -- in CameraTest
