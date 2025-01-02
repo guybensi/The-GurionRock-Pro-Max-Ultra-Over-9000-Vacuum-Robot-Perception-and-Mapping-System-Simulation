@@ -43,6 +43,7 @@ public class LiDarService extends MicroService {
     protected void initialize() {
         subscribeBroadcast(TickBroadcast.class, tick -> {
             int currentTime = tick.getTime();
+            System.out.println(getName() + ": got a tick and the tick is, " + tick.getTime());
             lidarWorkerTracker.updateTick(currentTime);
             while (!eventQueue.isEmpty()) {
                 TrackedObjectsEvent event = eventQueue.peek();
@@ -72,8 +73,8 @@ public class LiDarService extends MicroService {
             }
         });
         subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
+            System.out.println(getName() + ": got crashed");
             terminate();
-            sendBroadcast(new TerminatedBroadcast(getName()));
         });
     
         subscribeEvent(DetectObjectsEvent.class, event -> {

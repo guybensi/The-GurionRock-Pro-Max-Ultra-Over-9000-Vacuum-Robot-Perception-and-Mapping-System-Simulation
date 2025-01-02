@@ -1,6 +1,7 @@
 package bgu.spl.mics.application.services;
 
 import bgu.spl.mics.MicroService;
+import bgu.spl.mics.application.messages.CrashedBroadcast;
 import bgu.spl.mics.application.messages.TerminatedBroadcast;
 import bgu.spl.mics.application.messages.TickBroadcast;
 import bgu.spl.mics.application.objects.FusionSlam;
@@ -14,6 +15,7 @@ public class TimeService extends MicroService {
 
     private final int tickTime;  // Duration of each tick in milliseconds
     private final int duration;  // Total number of ticks
+
 
 
     /**
@@ -35,25 +37,44 @@ public class TimeService extends MicroService {
     @Override
     protected void initialize() {
         System.out.println("TimeService initialized.");
-        try {
-            for (int currentTick = 1; currentTick <= duration && !FusionSlam.getInstance().isTerminated(); currentTick++) {
-                // Broadcast the current tick
-                sendBroadcast(new TickBroadcast(currentTick, duration));
-                System.out.println("TimeService broadcasted Tick: " + currentTick);
-                // Update system runtime in StatisticalFolder
-                StatisticalFolder.getInstance().updateSystemRuntime(1);
-                // Wait for the next tick
-                Thread.sleep(tickTime * 1000L);
+        
+        subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
+            System.out.println(getName() + ": got crashed");
+            terminate();
+        });
+        
+        subscribeBroadcast(TickBroadcast.class, (TickBroadcast broadcast) -> {
+            int currentTick = broadcast.getTime();
+            
+            if (currentTick < duration && !FusionSlam.getInstance().isTerminated() && !isterminated()) {
+                try {
+                    // חכה את משך הזמן המתאים לכל Tick
+                    Thread.sleep(tickTime * 1000L);
+                    
+                    // שדר את ה-Tick הבא
+                    sendBroadcast(new TickBroadcast(currentTick + 1, duration));
+                    int sentTick = currentTick +1;
+                    System.out.println("TimeService broadcasted Tick: "  + sentTick);
+        
+                    // עדכן את זמן הריצה במערכת הסטטיסטית
+                    StatisticalFolder.getInstance().updateSystemRuntime(1);
+        
+                } catch (InterruptedException e) {
+                    System.out.println("TimeService interrupted during Tick: " + currentTick);
+                    Thread.currentThread().interrupt(); // שמור על סטטוס ה-interrupt
+                    terminate();
+                    sendBroadcast(new TerminatedBroadcast(getName()));
+                    System.out.println("TimeService broadcasted TerminatedBroadcast.");
+                }
+            } else {
+                // סיים את השירות כאשר התנאים מסתיימים
+                terminate();
+                sendBroadcast(new TerminatedBroadcast(getName()));
+                System.out.println("TimeService broadcasted TerminatedBroadcast.");
             }
+        });
+        
+        sendBroadcast(new TickBroadcast(1, duration));
 
-            // After all ticks are complete, broadcast TerminatedBroadcast
-            sendBroadcast(new TerminatedBroadcast(getName()));
-            System.out.println("TimeService broadcasted TerminatedBroadcast.");
-        } catch (InterruptedException e) {
-            System.out.println("TimeService interrupted. Terminating...");
-            Thread.currentThread().interrupt(); // Restore interrupt status
-        } finally {
-            terminate(); // Signal the service to terminate
-        }
     }
 }

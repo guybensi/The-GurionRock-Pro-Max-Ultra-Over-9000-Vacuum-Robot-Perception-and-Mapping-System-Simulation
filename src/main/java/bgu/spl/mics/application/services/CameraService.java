@@ -99,8 +99,8 @@ public class CameraService extends MicroService {
             }
         });
         subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
+            System.out.println(getName() + ": got crashed");
             terminate();
-            sendBroadcast(new TerminatedBroadcast(getName()));   
         });
         
     }

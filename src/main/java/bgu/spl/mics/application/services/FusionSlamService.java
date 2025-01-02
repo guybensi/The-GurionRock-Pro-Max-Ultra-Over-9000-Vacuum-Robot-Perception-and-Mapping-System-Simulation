@@ -62,14 +62,18 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
 
         // Register for TickBroadcast
         subscribeBroadcast(TickBroadcast.class, broadcast -> {
+            System.out.println(getName() + ": got a tick and the tick is, " + broadcast.getTime());
            fusionSlam.setTick(broadcast.getTime());
         });
 
         // Register for TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, broadcast -> {
+            
             fusionSlam.decreaseServiceCounter();
             if (fusionSlam.getserviceCounter() == 0) {
                 // Generate output file
+                System.out.println(getName() + ": counter is 0 to terminate");
+
                 terminate();
                 System.out.println(getName() + ": is terminated");
                 Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
@@ -81,6 +85,7 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
 
         // Register for CrashedBroadcast
         subscribeBroadcast(CrashedBroadcast.class, broadcast -> {
+            System.out.println(getName() + ": got crashed");
             terminate();
             // Generate output file with errors
             boolean isError = true; // Set to true if an error occurred
