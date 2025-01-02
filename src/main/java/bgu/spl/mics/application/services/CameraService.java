@@ -50,12 +50,11 @@ public class CameraService extends MicroService {
         // Subscribe to TickBroadcast
         subscribeBroadcast(TickBroadcast.class, (TickBroadcast broadcast) -> {
             int currentTime = broadcast.getTime();
-
             // Check if the camera is active and it's time to send an event
-            //--------------------לוודא את עניין הזמנים שוב
             if (camera.getStatus() == STATUS.UP) {
                 StampedDetectedObject detectedObject = camera.getDetectedObjectsAtTime(currentTime);
                 if (camera.getStatus() == STATUS.ERROR){
+                    System.out.println(getName() + ": ihas an error");
                     terminate();
                     sendBroadcast(new CrashedBroadcast(camera.getErrMString(), "camera" + camera.getId()));
                 }
@@ -73,6 +72,7 @@ public class CameraService extends MicroService {
                         }
                         DetectObjectsEvent readyEvent = eventQueue.poll(); // Remove the first event (FIFO)
                         sendEvent(readyEvent);
+                        System.out.println(getName() + ": has sent an event");
                         StatisticalFolder.getInstance().updateNumDetectedObjects(
                                 readyEvent.getStampedDetectedObjects().getDetectedObjects().size()
                         );
@@ -84,6 +84,7 @@ public class CameraService extends MicroService {
                 }
             }
             else {//camers is down 
+                System.out.println(getName() + ": is terminated");
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));     
             }
@@ -96,7 +97,6 @@ public class CameraService extends MicroService {
                 sendBroadcast(new TerminatedBroadcast(getName()));  
             }
         });
-        // Subscribe to TerminatedBroadcast
         subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
             terminate();
             sendBroadcast(new TerminatedBroadcast(getName()));   

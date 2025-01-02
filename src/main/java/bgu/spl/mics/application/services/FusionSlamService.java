@@ -38,6 +38,7 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
         subscribeEvent(TrackedObjectsEvent.class, event -> {
             if (fusionSlam.getPoseAtTime(event.getTrackedObjects().get(0).getTime())  != null){
                 fusionSlam.processTrackedObjects(event.getTrackedObjects());
+                System.out.println("the event has been processed in: " + getName());
                 complete(event, true);
             }
             else{
@@ -54,6 +55,7 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
             while (!waitingTrackedObjects.isEmpty() && fusionSlam.getPoseAtTime(waitingTrackedObjects.peek().getTime()) != null){
                 TrackedObjectsEvent e = waitingTrackedObjects.poll(); 
                 fusionSlam.processTrackedObjects(e.getTrackedObjects());
+                System.out.println("the event has been processed in: " + getName());
                 complete(e, true);
             }
         });
@@ -69,8 +71,10 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
             if (fusionSlam.getserviceCounter() == 0) {
                 // Generate output file
                 terminate();
+                System.out.println(getName() + ": is terminated");
                 Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
                 List<Pose> poses = fusionSlam.getPosesUpToTick(fusionSlam.getTick()); // Populate if isError = true
+                System.out.println(getName() + ": is printing an output file");
                 fusionSlam.generateOutputFile("output_file.json", false, null, null, lastFrames, poses);// איפה הקובץ?
             }/// כאן במקרה שאין שגיאה לא צריך לייצא את הפוזות האחרונות ואת הפריימים האחרונים
         });
@@ -84,6 +88,7 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
             String faultySensor = broadcast.getSenderId(); // Populate if isError = true
             Map<String, Object> lastFrames = new HashMap<>(); /// כאן צריך להבין איך בונים את האובייקט הזה אין מה לשלוח אותו ריק
             List<Pose> poses = fusionSlam.getPosesUpToTick(fusionSlam.getTick()); // אולי אין מה למשוך את המידע ולשלוח אותו חזרה לפיוזן פשוט לבדוק אותו שם 
+            System.out.println(getName() + ": is printing an output file");
             fusionSlam.generateOutputFile("output_file.json", isError, errorDescription, faultySensor, lastFrames, poses);// איפה הקובץ?
         });//// אולי כדאי פשוט שהפונקציה תקבל רק את 4 הארגומנטים הראשונים, פוזות יש לו בשדה שלו ואת הפריימס צריך לחשוב איך עושים 
     }

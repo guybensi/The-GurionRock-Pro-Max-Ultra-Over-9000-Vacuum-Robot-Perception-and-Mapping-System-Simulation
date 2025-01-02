@@ -1,5 +1,6 @@
 package bgu.spl.mics.application.objects;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -59,8 +60,11 @@ public class GPSIMU {
 
     public List<Pose> loadPosesFromFile(String filePath) {
         try (FileReader reader = new FileReader(filePath)) {
+            System.out.println("pose attempting to read file: " + new File(filePath).getAbsolutePath());
             Gson gson = new Gson();
-            return gson.fromJson(reader, new TypeToken<List<Pose>>() {}.getType());
+            List<Pose> data = gson.fromJson(reader, new TypeToken<List<Pose>>() {}.getType());
+            System.out.println("pose loaded " + data.size() + " detected objects.");
+            return data;
         } catch (IOException e) {
             return new ArrayList<>(); // Return an empty list in case of failure
         }

@@ -1,5 +1,6 @@
 package bgu.spl.mics.application.objects;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -69,6 +70,7 @@ public class Camera {
 
     public void loadDetectedObjectsFromFile(String filePath, String cameraKey) {
         try (FileReader reader = new FileReader(filePath)) {
+            System.out.println("Camera attempting to read file: " + new File(filePath).getAbsolutePath());
             Gson gson = new Gson();
             java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {}.getType();
             Map<String, List<List<StampedDetectedObject>>> cameraData = gson.fromJson(reader, type);
@@ -83,6 +85,7 @@ public class Camera {
             } else {
                 detectedObjectsList = new ArrayList<>();
             }
+            System.out.println("Camera " + id + " loaded " + detectedObjectsList.size() + " detected objects.");
         } catch (IOException e) {
             detectedObjectsList = new ArrayList<>();
         } catch (Exception e) {

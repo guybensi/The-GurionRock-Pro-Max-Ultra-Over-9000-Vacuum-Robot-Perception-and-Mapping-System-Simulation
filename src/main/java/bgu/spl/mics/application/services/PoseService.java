@@ -39,13 +39,17 @@ public class PoseService extends MicroService {
                 Pose currentPose = gpsimu.getPoseAtTime();
                 if (currentPose != null) {
                     // Broadcast PoseEvent with the current pose and sender name
+                    System.out.println(getName() + ": sent an event");
+
                     sendEvent(new PoseEvent(currentPose, getName()));
                 }
                 if (gpsimu.getStatus() == STATUS.DOWN){
+                    System.out.println(getName() + ": is terminated");
                     terminate();
                     sendBroadcast(new TerminatedBroadcast(getName())); 
                 }
             } else {
+                System.out.println(getName() + ": is terminated");
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));     
             }
@@ -54,6 +58,7 @@ public class PoseService extends MicroService {
         // Subscribe to TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
             if (broadcast.getSenderId() == "TimeService"){
+                System.out.println(getName() + ": is terminated");
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));  
             }

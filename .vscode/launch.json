@@ -8,7 +8,7 @@
         "mainClass": "bgu.spl.mics.application.GurionRockRunner",
         "args": ["example_input_2/configuration_file.json"], 
         "vmArgs": "",
-        "projectName": "BGURock"
+        "projectName": "bgu.spl.mics.application.GurionRockRunner"
       }
     ]
   }
