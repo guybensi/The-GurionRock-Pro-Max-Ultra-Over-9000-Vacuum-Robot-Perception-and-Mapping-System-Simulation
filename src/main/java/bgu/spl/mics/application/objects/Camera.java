@@ -27,11 +27,19 @@ public class Camera {
         this.id = id;
         this.frequency = frequency;
         this.status = STATUS.UP;
-        errMString = null;
+        this.errMString = null;
+        this.detectedObjectsList = new ArrayList<>(); // יוזמה של רשימה ריקה
         loadDetectedObjectsFromFile(filePath, cameraKey);
-        maxTime = 4;
-
+        if (!detectedObjectsList.isEmpty()) {
+            this.maxTime = detectedObjectsList.stream()
+                              .mapToInt(StampedDetectedObject::getTime)
+                              .max()
+                              .orElse(4);
+        } else {
+            this.maxTime = 3; // ברירת מחדל במידה ולא נטענו נתונים
+        }
     }
+    
 
     public int getId() {
         return id;
@@ -84,7 +92,6 @@ public class Camera {
                 }
                 detectedObjectsList = new ArrayList<>(cameraObjects);
                 maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(4);
-                maxTime = 2;
             } else {
                 detectedObjectsList = new ArrayList<>();
             }
