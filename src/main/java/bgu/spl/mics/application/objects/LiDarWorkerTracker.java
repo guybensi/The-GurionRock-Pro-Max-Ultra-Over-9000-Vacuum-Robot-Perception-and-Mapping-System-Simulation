@@ -63,12 +63,9 @@ public class LiDarWorkerTracker {
     }
 
     public List<CloudPoint> getCoordinates(String id, int time) {
-        System.out.println("Fetching coordinates for ID: " + id + " at time: " + time);
         List<StampedCloudPoints> cloudPointsList = liDarDataBase.getCloudPoints();
         for (StampedCloudPoints stampedCloudPoints : cloudPointsList) {
-            System.out.println("Checking ID: " + stampedCloudPoints.getId() + " at time: " + stampedCloudPoints.getTime());
             if (stampedCloudPoints.getId().equals(id) && stampedCloudPoints.getTime() == time) {
-                System.out.println("Coordinates found, decrementing counter");
                 liDarDataBase.decrementCounter();
                 if (liDarDataBase.getCounter() == 0) {
                     setStatus(STATUS.DOWN);
@@ -76,7 +73,6 @@ public class LiDarWorkerTracker {
                 return stampedCloudPoints.listToCloudPoints();
             }
         }
-        System.out.println("No coordinates found for ID: " + id + " at time: " + time);
         return new ArrayList<>();
     }
     
@@ -84,12 +80,9 @@ public class LiDarWorkerTracker {
     
 
     public void checkForErrorInCloudPointsAtTime(int time) {
-        System.out.println("Checking for errors at time: " + time);
         List<StampedCloudPoints> cloudPointsList = liDarDataBase.getCloudPoints();
         for (StampedCloudPoints stampedCloudPoints : cloudPointsList) {
-            System.out.println("Fetching coordinates for ID: " + stampedCloudPoints.getId() + " at time: " + stampedCloudPoints.getTime());
             if ("ERROR".equals(stampedCloudPoints.getId()) && stampedCloudPoints.getTime() == time) {
-                System.out.println("ERROR found, setting status to ERROR");
                 setStatus(STATUS.ERROR);
                 break;
             }
