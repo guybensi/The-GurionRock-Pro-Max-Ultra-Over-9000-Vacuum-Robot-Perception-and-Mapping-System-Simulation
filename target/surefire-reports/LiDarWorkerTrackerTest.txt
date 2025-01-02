@@ -1,27 +1,43 @@
 -------------------------------------------------------------------------------
 Test set: LiDarWorkerTrackerTest
 -------------------------------------------------------------------------------
-Tests run: 4, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.080 s <<< FAILURE! -- in LiDarWorkerTrackerTest
-LiDarWorkerTrackerTest.testProcessingEventWithError -- Time elapsed: 0.048 s <<< FAILURE!
-org.opentest4j.AssertionFailedError: LiDarWorker status should be set to ERROR. ==> expected: <ERROR> but was: <UP>
-	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
-	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
-	at org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
-	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
-	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
-	at LiDarWorkerTrackerTest.testProcessingEventWithError(LiDarWorkerTrackerTest.java:52)
+Tests run: 4, Failures: 0, Errors: 4, Skipped: 0, Time elapsed: 0.080 s <<< FAILURE! -- in LiDarWorkerTrackerTest
+LiDarWorkerTrackerTest.testProcessingEventWithError -- Time elapsed: 0.034 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problem: 
+	Unreachable catch block for IOException. This exception is never thrown from the try statement body
+
+	at LiDarWorkerTrackerTest.setup(LiDarWorkerTrackerTest.java:28)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
 
-LiDarWorkerTrackerTest.testCoordinatesAreFetchedCorrectly -- Time elapsed: 0.002 s <<< FAILURE!
-org.opentest4j.AssertionFailedError: Coordinates list should not be empty. ==> expected: <false> but was: <true>
-	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
-	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
-	at org.junit.jupiter.api.AssertFalse.failNotFalse(AssertFalse.java:63)
-	at org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:36)
-	at org.junit.jupiter.api.Assertions.assertFalse(Assertions.java:239)
-	at LiDarWorkerTrackerTest.testCoordinatesAreFetchedCorrectly(LiDarWorkerTrackerTest.java:72)
+LiDarWorkerTrackerTest.testProcessingEventSuccessfully -- Time elapsed: 0.002 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problem: 
+	Unreachable catch block for IOException. This exception is never thrown from the try statement body
+
+	at LiDarWorkerTrackerTest.setup(LiDarWorkerTrackerTest.java:28)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+LiDarWorkerTrackerTest.testProcessingEventNoObjectsAtTime -- Time elapsed: 0.006 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problem: 
+	Unreachable catch block for IOException. This exception is never thrown from the try statement body
+
+	at LiDarWorkerTrackerTest.setup(LiDarWorkerTrackerTest.java:28)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+LiDarWorkerTrackerTest.testCoordinatesAreFetchedCorrectly -- Time elapsed: 0.001 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problem: 
+	Unreachable catch block for IOException. This exception is never thrown from the try statement body
+
+	at LiDarWorkerTrackerTest.setup(LiDarWorkerTrackerTest.java:28)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
