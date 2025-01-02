@@ -18,7 +18,7 @@ public class LiDarWorkerTracker {
     private int maxTime;
     
 
-    // Constructor to initialize the LiDarWorkerTracker object.
+    // Constructor to initialize the LiשDarWorkerTracker object.
     public LiDarWorkerTracker(int id, int frequency, String lidarDataFilePath) {
         this.id = id;
         this.frequency = frequency;
