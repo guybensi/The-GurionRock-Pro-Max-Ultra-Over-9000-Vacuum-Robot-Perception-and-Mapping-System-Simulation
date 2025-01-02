@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -163,57 +162,6 @@ class MessageBusImplTest {
         assertFalse(messageBus.isRegistered(handler), 
             "Expected: Handler is no longer registered with the message bus after unregister. Actual: Handler is still registered.");
     }
-    /*רעיונות לעוד בדיקות שאולי אפשר להוסיף:
-     * שני הנדלרים שרשומים ולוודא שהאירוע נכנס רק לתור הודעות של אחד מהם 
-     */
-     @Test
-    public void testSendEventRoundRobin() throws InterruptedException {
-        MessageBusImpl messageBus = MessageBusImpl.getInstance();
-        // ייצרנו שני מיקרו-שירותים
-        MicroService handler1 = new ExampleEventHandlerService("Handler", new String[]{"5"});
-        MicroService handler2 = new ExampleEventHandlerService("Handler", new String[]{"5"});
-        messageBus.register(handler1);
-        messageBus.register(handler1);
-        messageBus.subscribeEvent(ExampleEvent.class, handler1);
-        messageBus.subscribeEvent(ExampleEvent.class, handler2);
-
-        Queue<MicroService> subscribers = messageBus.getEventSubscribers(ExampleEvent.class);
-        assertEquals(subscribers.peek(), handler1, "The first handler in the queue should be handler1.");
-
-        Event<String> event1 = new ExampleEvent("TestEvent");
-        Event<String> event2 = new ExampleEvent("TestEvent");
-        Event<String> event3 = new ExampleEvent("TestEvent");
-        
-        // נשלח את האירועים
-        messageBus.sendEvent(event1); 
-        assertEquals(subscribers.peek(), handler2, "After sending event1 handler2 should be at the front.");
-        messageBus.sendEvent(event2); 
-        assertEquals(subscribers.peek(), handler1, "After sending event2 handler1 should be at the front.");
-        messageBus.sendEvent(event3); 
-        assertEquals(subscribers.peek(), handler2, "After sending event3 handler2 should be at the front.");
-
-        // נוודא שהסדר נכון: Micro1 -> Micro2 -> Micro1
-        Message message1 = messageBus.awaitMessage(handler1);
-        Message message3 = messageBus.awaitMessage(handler1);  
-        Message message2 = messageBus.awaitMessage(handler2); 
-        
-        // נוודא שהסדר נכון: Micro1 -> Micro2 -> Micro1
-        assertTrue(message1 instanceof Event, "Message for micro1 should be an event.");
-        assertTrue(message2 instanceof Event, "Message for micro2 should be an event.");
-        assertTrue(message3 instanceof Event, "Message for micro1 should be an event.");
-
-        // נוודא שהמיקרו-שירות הראשון קיבל את האירועים הראשון והשלישי
-        assertEquals(message1, event1, "First message should be for micro1 (event1).");
-        assertEquals(message3, event3, "Third message should be for micro1 (event3).");
-
-        // נוודא שהמיקרו-שירות השני קיבל את האירוע השני
-        assertEquals(message2, event2, "Second message should be for micro2 (event2).");
-
-        // Cleanup
-        messageBus.unregister(handler1);
-        messageBus.unregister(handler2);
-
-}
 
     @Test
     void testAwaitMessageThrowsExceptionIfNotRegistered() {
@@ -430,6 +378,58 @@ class MessageBusImplTest {
         assertThrows(IllegalStateException.class, () -> messageBus.awaitMessage(service),
                 "Expected IllegalStateException when awaiting message for an unregistered service.");
     }
+
+    /*רעיונות לעוד בדיקות שאולי אפשר להוסיף:
+     * שני הנדלרים שרשומים ולוודא שהאירוע נכנס רק לתור הודעות של אחד מהם 
+     */
+    
+     @Test
+     public void testSendEventRoundRobin() throws InterruptedException {
+         MessageBusImpl messageBus = MessageBusImpl.getInstance();
+     
+         // ייצרנו שני מיקרו-שירותים
+         MicroService handler1 = new ExampleEventHandlerService("Handler1", new String[]{"5"});
+         MicroService handler2 = new ExampleEventHandlerService("Handler2", new String[]{"5"});
+     
+         // רישום המיקרו-שירותים
+         messageBus.register(handler1);
+         messageBus.register(handler2);
+     
+         // מנויים לאירועים
+         messageBus.subscribeEvent(ExampleEvent.class, handler1);
+         messageBus.subscribeEvent(ExampleEvent.class, handler2);
+     
+         // שליחת אירועים
+         Event<String> event1 = new ExampleEvent("TestEvent1");
+         Event<String> event2 = new ExampleEvent("TestEvent2");
+         Event<String> event3 = new ExampleEvent("TestEvent3");
+     
+         messageBus.sendEvent(event1);
+         messageBus.sendEvent(event2);
+         messageBus.sendEvent(event3);
+     
+         // וידוא שהמנויים מתנהגים לפי Round Robin
+         Message message1 = messageBus.awaitMessage(handler1);
+         Message message2 = messageBus.awaitMessage(handler2);
+         Message message3 = messageBus.awaitMessage(handler1);
+     
+         // בדיקות של הסדר
+         assertTrue(message1 instanceof Event, "Message for handler1 should be an event.");
+         assertTrue(message2 instanceof Event, "Message for handler2 should be an event.");
+         assertTrue(message3 instanceof Event, "Message for handler1 should be an event.");
+     
+         // בדיקות שהאירועים הגיעו למנויים הנכונים
+         assertEquals(message1, event1, "First message should be for handler1 (event1).");
+         assertEquals(message2, event2, "Second message should be for handler2 (event2).");
+         assertEquals(message3, event3, "Third message should be for handler1 (event3).");
+     
+         // ניקיון
+         messageBus.unregister(handler1);
+         messageBus.unregister(handler2);
+     }
+     
+
+        
 
 }
 
