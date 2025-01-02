@@ -7,12 +7,13 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The main entry point for the GurionRock Pro Max Ultra Over 9000 simulation.
@@ -31,8 +32,17 @@ public class GurionRockRunner {
 
         String configFilePath = args[0];
         try (FileReader reader = new FileReader(configFilePath)) {
+            File configFile = new File(configFilePath);
+            if (!configFile.exists()) {
+                System.out.println("Configuration file not found at: " + configFilePath);
+                return;
+            }
+
             Gson gson = new Gson();
             JsonObject config = JsonParser.parseReader(reader).getAsJsonObject();
+
+            // Print loaded configuration for debugging
+            System.out.println("Configuration loaded: " + config);
 
             // Parse Cameras
             JsonObject camerasConfig = config.getAsJsonObject("Cameras");
@@ -42,8 +52,12 @@ public class GurionRockRunner {
                 new TypeToken<List<JsonObject>>() {}.getType()
             );
             List<CameraService> cameraServices = new ArrayList<>();
+            Set<Integer> cameraIds = new HashSet<>();
             for (JsonObject camera : camerasList) {
                 int id = camera.get("id").getAsInt();
+                if (!cameraIds.add(id)) {
+                    throw new IllegalArgumentException("Duplicate camera ID detected: " + id);
+                }
                 int frequency = camera.get("frequency").getAsInt();
                 String key = camera.get("camera_key").getAsString();
                 Camera cam = new Camera(id, frequency, key, cameraDataPath);
@@ -58,8 +72,12 @@ public class GurionRockRunner {
                 new TypeToken<List<JsonObject>>() {}.getType()
             );
             List<LiDarService> lidarServices = new ArrayList<>();
+            Set<Integer> lidarIds = new HashSet<>();
             for (JsonObject lidar : lidarsList) {
                 int id = lidar.get("id").getAsInt();
+                if (!lidarIds.add(id)) {
+                    throw new IllegalArgumentException("Duplicate LiDar ID detected: " + id);
+                }
                 int frequency = lidar.get("frequency").getAsInt();
                 LiDarWorkerTracker lidarTracker = new LiDarWorkerTracker(id, frequency, lidarDataPath);
                 lidarServices.add(new LiDarService("LiDarService" + id, lidarTracker));
@@ -94,14 +112,27 @@ public class GurionRockRunner {
             lidarServices.forEach(executor::submit);
             executor.submit(poseService);
             executor.submit(fusionSlamService);
+
+            // Start TimeService last
             executor.submit(timeService);
 
             // Shutdown executor after completion
             executor.shutdown();
+            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+
+            System.out.println("Simulation completed successfully!");
 
         } catch (IOException e) {
+            System.out.println("Error reading configuration file: " + e.getMessage());
             e.printStackTrace();
-            System.out.println("Failed to parse configuration file or initialize the system.");
+        } catch (IllegalArgumentException e) {
+            System.out.println("Configuration error: " + e.getMessage());
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            System.out.println("Simulation interrupted: " + e.getMessage());
+            Thread.currentThread().interrupt();
         }
     }
 }
