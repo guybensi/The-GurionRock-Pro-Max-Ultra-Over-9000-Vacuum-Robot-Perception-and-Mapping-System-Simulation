@@ -29,6 +29,8 @@ public class Camera {
         this.status = STATUS.UP;
         errMString = null;
         loadDetectedObjectsFromFile(filePath, cameraKey);
+        maxTime = 4;
+
     }
 
     public int getId() {
@@ -81,7 +83,8 @@ public class Camera {
                     cameraObjects.addAll(list);
                 }
                 detectedObjectsList = new ArrayList<>(cameraObjects);
-                maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(0);
+                maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(4);
+                maxTime = 2;
             } else {
                 detectedObjectsList = new ArrayList<>();
             }
@@ -94,7 +97,7 @@ public class Camera {
     }
 
     public void checkIfDone(int currentTime) {
-        if (currentTime >= maxTime) {
+        if (currentTime >= this.maxTime) {
             setStatus(STATUS.DOWN);
         }
     }
