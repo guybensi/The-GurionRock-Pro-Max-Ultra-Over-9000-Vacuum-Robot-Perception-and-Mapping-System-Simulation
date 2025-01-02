@@ -27,6 +27,7 @@ import java.util.concurrent.*;
         @Override
         public void register(MicroService m) {
             microServiceQueues.putIfAbsent(m, new LinkedBlockingQueue<>());
+            System.out.println("Registered MicroService: " + m.getName());
         }
 
         @Override
@@ -46,6 +47,7 @@ import java.util.concurrent.*;
             List<MicroService> subscribers = broadcastSubscribers.get(type);
             if (!subscribers.contains(m)) {  // מוודא שהמיקרו-שירות לא נרשם פעמיים
                 subscribers.add(m);
+                System.out.println(m.getName() + " subscribed to Broadcast: " + type.getSimpleName());
             }
             
         }
@@ -69,21 +71,26 @@ import java.util.concurrent.*;
         }
         
 
-        @Override
-        public void sendBroadcast(Broadcast b) {
-            List<MicroService> subscribers;
-            subscribers = broadcastSubscribers.get(b.getClass());  
-            if (subscribers != null) {
-                    for (MicroService m : subscribers) {
-                        try {
-                            microServiceQueues.get(m).put(b);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                
+    @Override
+    public void sendBroadcast(Broadcast b) {
+        List<MicroService> subscribers = broadcastSubscribers.get(b.getClass());
+        if (subscribers == null || subscribers.isEmpty()) {
+            System.out.println("No subscribers found for broadcast: " + b.getClass().getSimpleName());
+        } else {
+            for (MicroService m : subscribers) {
+                System.out.println("Broadcasting to: " + m.getName());
+                if (!microServiceQueues.containsKey(m)) {
+                    System.out.println("Error: MicroService " + m.getName() + " is not registered in microServiceQueues.");
+                }
+                try {
+                    microServiceQueues.get(m).put(b);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
+    }
+
         
         /**
          * שולח אירוע למיקרו-שירות שנרשם אליו (אם יש מנוי).
@@ -124,6 +131,7 @@ import java.util.concurrent.*;
         @Override
         public void unregister(MicroService m) {
                 microServiceQueues.remove(m);
+                System.out.println("Unregistered MicroService: " + m.getName());
                 for (Queue <MicroService> subscribers : eventSubscribers.values()) {
                     synchronized(subscribers){ 
                         subscribers.remove(m);

@@ -50,11 +50,12 @@ public class CameraService extends MicroService {
         // Subscribe to TickBroadcast
         subscribeBroadcast(TickBroadcast.class, (TickBroadcast broadcast) -> {
             int currentTime = broadcast.getTime();
+            System.out.println(getName() + ": got a tick, " + currentTime + " and my status is: " + camera.getStatus());
             // Check if the camera is active and it's time to send an event
             if (camera.getStatus() == STATUS.UP) {
                 StampedDetectedObject detectedObject = camera.getDetectedObjectsAtTime(currentTime);
                 if (camera.getStatus() == STATUS.ERROR){
-                    System.out.println(getName() + ": ihas an error");
+                    System.out.println(getName() + ": has an error");
                     terminate();
                     sendBroadcast(new CrashedBroadcast(camera.getErrMString(), "camera" + camera.getId()));
                 }

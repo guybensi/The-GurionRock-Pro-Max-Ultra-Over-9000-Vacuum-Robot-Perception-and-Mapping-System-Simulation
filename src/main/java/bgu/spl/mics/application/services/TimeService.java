@@ -36,7 +36,7 @@ public class TimeService extends MicroService {
     protected void initialize() {
         System.out.println("TimeService initialized.");
         try {
-            for (int currentTick = 0; currentTick <= duration && !FusionSlam.getInstance().isTerminated(); currentTick++) {
+            for (int currentTick = 1; currentTick <= duration && !FusionSlam.getInstance().isTerminated(); currentTick++) {
                 // Broadcast the current tick
                 sendBroadcast(new TickBroadcast(currentTick, duration));
                 System.out.println("TimeService broadcasted Tick: " + currentTick);

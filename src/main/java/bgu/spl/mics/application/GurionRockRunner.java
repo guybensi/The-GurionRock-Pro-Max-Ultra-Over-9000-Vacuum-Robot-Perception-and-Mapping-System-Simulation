@@ -11,9 +11,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * The main entry point for the GurionRock Pro Max Ultra Over 9000 simulation.
@@ -51,7 +48,7 @@ public class GurionRockRunner {
                 camerasConfig.getAsJsonArray("CamerasConfigurations"),
                 new TypeToken<List<JsonObject>>() {}.getType()
             );
-            List<CameraService> cameraServices = new ArrayList<>();
+            List<Thread> cameraThreads = new ArrayList<>();
             Set<Integer> cameraIds = new HashSet<>();
             for (JsonObject camera : camerasList) {
                 int id = camera.get("id").getAsInt();
@@ -60,8 +57,12 @@ public class GurionRockRunner {
                 }
                 int frequency = camera.get("frequency").getAsInt();
                 String key = camera.get("camera_key").getAsString();
+                if (key == null || key.isEmpty()) {
+                    throw new IllegalArgumentException("camera_key is missing or invalid for camera ID: " + id);
+                }
                 Camera cam = new Camera(id, frequency, key, cameraDataPath);
-                cameraServices.add(new CameraService(cam));
+                CameraService cameraService = new CameraService(cam);
+                cameraThreads.add(new Thread(cameraService, "CameraService" + id));
             }
 
             // Parse LiDars
@@ -71,7 +72,7 @@ public class GurionRockRunner {
                 lidarsConfig.getAsJsonArray("LidarConfigurations"),
                 new TypeToken<List<JsonObject>>() {}.getType()
             );
-            List<LiDarService> lidarServices = new ArrayList<>();
+            List<Thread> lidarThreads = new ArrayList<>();
             Set<Integer> lidarIds = new HashSet<>();
             for (JsonObject lidar : lidarsList) {
                 int id = lidar.get("id").getAsInt();
@@ -80,49 +81,57 @@ public class GurionRockRunner {
                 }
                 int frequency = lidar.get("frequency").getAsInt();
                 LiDarWorkerTracker lidarTracker = new LiDarWorkerTracker(id, frequency, lidarDataPath);
-                lidarServices.add(new LiDarService("LiDarService" + id, lidarTracker));
+                LiDarService lidarService = new LiDarService("LiDarService" + id, lidarTracker);
+                lidarThreads.add(new Thread(lidarService, "LiDarService" + id));
             }
 
             // Parse Pose data
             String poseDataPath = config.get("poseJsonFile").getAsString();
             GPSIMU gpsimu = new GPSIMU(poseDataPath);
             PoseService poseService = new PoseService(gpsimu);
+            Thread poseThread = new Thread(poseService, "PoseService");
 
             // Parse Time configuration
             int tickTime = config.get("TickTime").getAsInt();
             int duration = config.get("Duration").getAsInt();
             TimeService timeService = new TimeService(tickTime, duration);
+            Thread timeThread = new Thread(timeService, "TimeService");
 
             // Initialize FusionSlam
             FusionSlam fusionSlam = FusionSlam.getInstance();
             FusionSlamService fusionSlamService = new FusionSlamService(fusionSlam);
+            Thread fusionSlamThread = new Thread(fusionSlamService, "FusionSlamService");
 
             // Update FusionSlam with service count
             fusionSlam.setserviceCounter(
-                cameraServices.size() + lidarServices.size() + 2 // +2 for PoseService and FusionSlamService
+                cameraThreads.size() + lidarThreads.size() + 1 // +1 for PoseService
             );
+            // Start all threads except TimeService
+            cameraThreads.forEach(Thread::start);
+            lidarThreads.forEach(Thread::start);
+            poseThread.start();
+            fusionSlamThread.start();
 
-            // Create executor for threads
-            ExecutorService executor = Executors.newFixedThreadPool(
-                cameraServices.size() + lidarServices.size() + 3 // +3 for PoseService, FusionSlamService, TimeService
-            );
-
-            // Start all services
-            cameraServices.forEach(executor::submit);
-            lidarServices.forEach(executor::submit);
-            executor.submit(poseService);
-            executor.submit(fusionSlamService);
+            // Sleep briefly to allow all threads to register
+            try {
+                Thread.sleep(100); // Adjust this if needed to ensure registration
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
 
             // Start TimeService last
-            executor.submit(timeService);
+            timeThread.start();
 
-            // Shutdown executor after completion
-            executor.shutdown();
-            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
+            // Wait for TimeService to complete
+            try {
+                timeThread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
 
             System.out.println("Simulation completed successfully!");
+
+
 
         } catch (IOException e) {
             System.out.println("Error reading configuration file: " + e.getMessage());
@@ -130,9 +139,6 @@ public class GurionRockRunner {
         } catch (IllegalArgumentException e) {
             System.out.println("Configuration error: " + e.getMessage());
             e.printStackTrace();
-        } catch (InterruptedException e) {
-            System.out.println("Simulation interrupted: " + e.getMessage());
-            Thread.currentThread().interrupt();
-        }
+    }
     }
 }
