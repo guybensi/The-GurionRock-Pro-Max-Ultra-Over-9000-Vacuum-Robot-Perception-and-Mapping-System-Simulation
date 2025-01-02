@@ -51,6 +51,7 @@ public class LiDarService extends MicroService {
                 }
                 TrackedObjectsEvent readyEvent = eventQueue.poll();
                 complete(readyEvent.getHandeledEvent(), true);
+                lidarWorkerTracker.setLastTrackedObjects(readyEvent.getTrackedObjects());//////אורי הוסיפה
                 sendEvent(readyEvent);
                 StatisticalFolder.getInstance().updateNumDetectedObjects(
                     readyEvent.getTrackedObjects().size());
@@ -77,7 +78,7 @@ public class LiDarService extends MicroService {
                 List<TrackedObject> TrackedObjects = lidarWorkerTracker.prosseingEvent(event.getStampedDetectedObjects());
                if (lidarWorkerTracker.getStatus()==STATUS.ERROR){
                     terminate();
-                    sendBroadcast(new CrashedBroadcast("LidarWorker" + lidarWorkerTracker.getId() + "disconnected", this.getName()));
+                    sendBroadcast(new CrashedBroadcast("LidarWorker" + lidarWorkerTracker.getId() + "disconnected", this.getName()+ ""+"LidarWorker" + lidarWorkerTracker.getId() ));
                }
                else{
                     int designatedTime = event.getStampedDetectedObjects().getTime() + lidarWorkerTracker.getFrequency();
@@ -86,6 +87,7 @@ public class LiDarService extends MicroService {
                     if (designatedTime <= currTime){ 
                         complete(event, true);
                         sendEvent(toSendEvent);
+                        lidarWorkerTracker.setLastTrackedObjects(TrackedObjects);//////אורי הוסיפה
                         StatisticalFolder.getInstance().updateNumTrackedObjects(TrackedObjects.size());
                     }
                     else{

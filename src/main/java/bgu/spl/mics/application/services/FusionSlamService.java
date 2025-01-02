@@ -1,13 +1,10 @@
 package bgu.spl.mics.application.services;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-
-
 import bgu.spl.mics.*;
 import bgu.spl.mics.application.objects.*;
 import bgu.spl.mics.application.messages.*;
@@ -75,7 +72,7 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
                 Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
                 List<Pose> poses = fusionSlam.getPosesUpToTick(fusionSlam.getTick()); // Populate if isError = true
                 fusionSlam.generateOutputFile("output_file.json", false, null, null, lastFrames, poses);// איפה הקובץ?
-            }
+            }/// כאן במקרה שאין שגיאה לא צריך לייצא את הפוזות האחרונות ואת הפריימים האחרונים
         });
 
         // Register for CrashedBroadcast
@@ -85,9 +82,11 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
             boolean isError = true; // Set to true if an error occurred
             String errorDescription = broadcast.getErrorMessage(); // Populate if isError = true
             String faultySensor = broadcast.getSenderId(); // Populate if isError = true
-            Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
-            List<Pose> poses = fusionSlam.getPosesUpToTick(fusionSlam.getTick()); // Populate if isError = true
+            Map<String, Object> lastFrames = new HashMap<>(); /// כאן צריך להבין איך בונים את האובייקט הזה אין מה לשלוח אותו ריק
+            List<Pose> poses = fusionSlam.getPosesUpToTick(fusionSlam.getTick()); // אולי אין מה למשוך את המידע ולשלוח אותו חזרה לפיוזן פשוט לבדוק אותו שם 
             fusionSlam.generateOutputFile("output_file.json", isError, errorDescription, faultySensor, lastFrames, poses);// איפה הקובץ?
-        });
+        });//// אולי כדאי פשוט שהפונקציה תקבל רק את 4 הארגומנטים הראשונים, פוזות יש לו בשדה שלו ואת הפריימס צריך לחשוב איך עושים 
     }
 }
+//// אולי להוסיף לסטטיסטיק פולדר מפה של מצלמות והדידקטד אובג'ט שלהן
+///  ולידר והלאסט טרקאקטד אובג' שלו וכל פעם ששולחים מידע לסטטיסטיק מעדכנים שם ובסוף פשוט עוברים על הרשימות האלו

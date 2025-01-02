@@ -200,6 +200,10 @@ import java.util.concurrent.*;
                 return queue.size();
             }
         }
+
+        public Queue<MicroService> getEventSubscribers(Class<? extends Event<?>> type) {
+            return eventSubscribers.get(type);
+        }
         
 
 }

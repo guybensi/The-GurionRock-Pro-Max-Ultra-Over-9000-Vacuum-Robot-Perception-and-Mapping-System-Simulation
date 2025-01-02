@@ -57,7 +57,7 @@ public class CameraService extends MicroService {
                 StampedDetectedObject detectedObject = camera.getDetectedObjectsAtTime(currentTime);
                 if (camera.getStatus() == STATUS.ERROR){
                     terminate();
-                    sendBroadcast(new CrashedBroadcast(camera.getErrMString(), this.getName()));
+                    sendBroadcast(new CrashedBroadcast(camera.getErrMString(), "camera" + camera.getId()));
                 }
                 else{
                     if (detectedObject != null) {

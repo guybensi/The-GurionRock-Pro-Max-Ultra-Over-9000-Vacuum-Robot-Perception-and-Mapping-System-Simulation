@@ -58,6 +58,10 @@ public class LiDarWorkerTracker {
         return liDarDataBase.getCloudPoints();
     }
 
+    public void setLastTrackedObjects (List<TrackedObject> newlist){ ////אורי הוסיפה פונקציה חדשה 
+        this.lastTrackedObjects = newlist;
+    }
+
     public List<CloudPoint> getCoordinates(String id, int time) {
         List<StampedCloudPoints> cloudPointsList = liDarDataBase.getCloudPoints();
         for (StampedCloudPoints stampedCloudPoints : cloudPointsList) {
@@ -83,7 +87,8 @@ public class LiDarWorkerTracker {
     }
 
     public List<TrackedObject> prosseingEvent(StampedDetectedObject stampedDetectedObjects) {
-        this.lastTrackedObjects = new ArrayList<>();
+        //this.lastTrackedObjects = new ArrayList<>();
+        List<TrackedObject> trackedObjectsToReturn = new ArrayList<>();////אורי שינתה פה 
         int detectionTime = stampedDetectedObjects.getTime();
         List<DetectedObject> detectedObjects = stampedDetectedObjects.getDetectedObjects();
         checkForErrorInCloudPointsAtTime(detectionTime);
@@ -95,11 +100,11 @@ public class LiDarWorkerTracker {
                     detectedObject.getDescription(),
                     getCoordinates(detectedObject.getId(), detectionTime)//להמיר את הקורדינטות לליסט של קלאוד
                     );
-                    lastTrackedObjects.add(trackedObject);
+                    trackedObjectsToReturn.add(trackedObject);
             }
         }
         
-        return lastTrackedObjects;
+        return trackedObjectsToReturn;
     }
 
     public void updateTick(int time) {
