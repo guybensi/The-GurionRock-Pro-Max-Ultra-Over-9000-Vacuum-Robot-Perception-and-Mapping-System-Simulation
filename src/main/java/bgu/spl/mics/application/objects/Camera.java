@@ -27,9 +27,19 @@ public class Camera {
         this.id = id;
         this.frequency = frequency;
         this.status = STATUS.UP;
-        errMString = null;
+        this.errMString = null;
+        this.detectedObjectsList = new ArrayList<>(); // יוזמה של רשימה ריקה
         loadDetectedObjectsFromFile(filePath, cameraKey);
+        if (!detectedObjectsList.isEmpty()) {
+            this.maxTime = detectedObjectsList.stream()
+                              .mapToInt(StampedDetectedObject::getTime)
+                              .max()
+                              .orElse(4);
+        } else {
+            this.maxTime = 3; // ברירת מחדל במידה ולא נטענו נתונים
+        }
     }
+    
 
     public int getId() {
         return id;
@@ -81,7 +91,7 @@ public class Camera {
                     cameraObjects.addAll(list);
                 }
                 detectedObjectsList = new ArrayList<>(cameraObjects);
-                maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(0);
+                maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(4);
             } else {
                 detectedObjectsList = new ArrayList<>();
             }
@@ -94,7 +104,7 @@ public class Camera {
     }
 
     public void checkIfDone(int currentTime) {
-        if (currentTime >= maxTime) {
+        if (currentTime >= this.maxTime) {
             setStatus(STATUS.DOWN);
         }
     }
