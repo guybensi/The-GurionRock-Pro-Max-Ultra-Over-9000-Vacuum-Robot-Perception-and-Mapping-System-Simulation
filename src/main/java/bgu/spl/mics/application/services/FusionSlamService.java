@@ -71,18 +71,19 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
 
         // Register for TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, broadcast -> {
-            
-            fusionSlam.decreaseServiceCounter();
-            if (fusionSlam.getserviceCounter() == 0) {
-                // Generate output file
-                System.out.println(getName() + ": counter is 0 to terminate");
-                terminate();
-                System.out.println(getName() + ": is terminated");
-                Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
-                List<Pose> poses = fusionSlam.getPosesUpToTick(fusionSlam.getTick()); // Populate if isError = true
-                System.out.println(getName() + ": is printing an output file");
-                fusionSlam.generateOutputFile("output_file.json", false, null, null, lastFrames, poses);// איפה הקובץ?
-            }/// כאן במקרה שאין שגיאה לא צריך לייצא את הפוזות האחרונות ואת הפריימים האחרונים
+            if (broadcast.getSenderId() != "TimeService"){
+                fusionSlam.decreaseServiceCounter();
+                if (fusionSlam.getserviceCounter() == 0) {
+                    // Generate output file
+                    System.out.println(getName() + ": counter is 0 to terminate");
+                    terminate();
+                    System.out.println(getName() + ": is terminated");
+                    Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
+                    List<Pose> poses = fusionSlam.getPosesUpToTick(fusionSlam.getTick()); // Populate if isError = true
+                    System.out.println(getName() + ": is printing an output file");
+                    fusionSlam.generateOutputFile("output_file.json", false, null, null, lastFrames, poses);// איפה הקובץ?
+                }/// כאן במקרה שאין שגיאה לא צריך לייצא את הפוזות האחרונות ואת הפריימים האחרונים
+            }
         });
 
         // Register for CrashedBroadcast

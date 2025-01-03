@@ -58,7 +58,6 @@ public class CameraService extends MicroService {
                     System.out.println(getName() + ": has an error");
                     terminate();
                     sendBroadcast(new CrashedBroadcast(camera.getErrMString(), "camera" + camera.getId()));
-
                 }
                 else{
                     if (detectedObject != null) {
