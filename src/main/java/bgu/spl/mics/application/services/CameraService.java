@@ -58,6 +58,7 @@ public class CameraService extends MicroService {
                     System.out.println(getName() + ": has an error");
                     terminate();
                     sendBroadcast(new CrashedBroadcast(camera.getErrMString(), "camera" + camera.getId()));
+
                 }
                 else{
                     if (detectedObject != null) {
@@ -73,19 +74,20 @@ public class CameraService extends MicroService {
                         }
                         DetectObjectsEvent readyEvent = eventQueue.poll(); // Remove the first event (FIFO)
                         sendEvent(readyEvent);
-                        System.out.println(getName() + ": has sent an event");
+                        System.out.println(getName() + ": has sent DetectObjectsEvent from time" + event.getStampedDetectedObjects().getTime());
                         StatisticalFolder.getInstance().updateNumDetectedObjects(
                                 readyEvent.getStampedDetectedObjects().getDetectedObjects().size()
                         );
                     }  
                 }
                 if (camera.getStatus() == STATUS.DOWN){
+                    System.out.println(getName() + ": down1 and terminate");
                     terminate();
                     sendBroadcast(new TerminatedBroadcast(getName()));  
                 }
             }
             else {//camers is down 
-                System.out.println(getName() + ": is terminated");
+                System.out.println(getName() + ": down2 and terminate");
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));     
             }
@@ -94,6 +96,7 @@ public class CameraService extends MicroService {
         // Subscribe to TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
             if (broadcast.getSenderId() == "TimeService"){
+                System.out.println(getName() + ": got TerminatedBroadcast from TimeService");
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));  
             }

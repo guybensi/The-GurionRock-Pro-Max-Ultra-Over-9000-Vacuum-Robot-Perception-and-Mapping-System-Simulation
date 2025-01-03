@@ -36,9 +36,10 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
     protected void initialize() {
         // Register for TrackedObjectsEvent
         subscribeEvent(TrackedObjectsEvent.class, event -> {
+            System.out.println(getName() + ": got TrackedObjectsEvent");
             if (fusionSlam.getPoseAtTime(event.getTrackedObjects().get(0).getTime())  != null){
                 fusionSlam.processTrackedObjects(event.getTrackedObjects());
-                System.out.println("the event has been processed in: " + getName());
+                System.out.println(getName()+ "processed TrackedObjectsEvent for objects from time"+ event.getTime() );
                 complete(event, true);
             }
             else{
@@ -50,12 +51,14 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
 
         // Register for PoseEvent
         subscribeEvent(PoseEvent.class, event -> {
+            System.out.println(getName() + ": got PoseEvent");
             fusionSlam.addPose(event.getPose());
+            System.out.println("PoseEvent from "+ event.getPose().getTime() +" has been processed in: " + getName());
             complete(event, true);
             while (!waitingTrackedObjects.isEmpty() && fusionSlam.getPoseAtTime(waitingTrackedObjects.peek().getTime()) != null){
                 TrackedObjectsEvent e = waitingTrackedObjects.poll(); 
                 fusionSlam.processTrackedObjects(e.getTrackedObjects());
-                System.out.println("the event has been processed in: " + getName());
+                System.out.println(getName()+ "processed waiting TrackedObjectsEvent for objects from time"+ e.getTime() );
                 complete(e, true);
             }
         });
@@ -73,7 +76,6 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
             if (fusionSlam.getserviceCounter() == 0) {
                 // Generate output file
                 System.out.println(getName() + ": counter is 0 to terminate");
-
                 terminate();
                 System.out.println(getName() + ": is terminated");
                 Map<String, Object> lastFrames = new HashMap<>(); // Populate if isError = true
@@ -85,7 +87,7 @@ private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects =
 
         // Register for CrashedBroadcast
         subscribeBroadcast(CrashedBroadcast.class, broadcast -> {
-            System.out.println(getName() + ": got crashed");
+            System.out.println(getName() + ": got crashed and terminate");
             terminate();
             // Generate output file with errors
             boolean isError = true; // Set to true if an error occurred

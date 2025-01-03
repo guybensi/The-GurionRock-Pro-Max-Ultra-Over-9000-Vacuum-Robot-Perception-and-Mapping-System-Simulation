@@ -75,6 +75,7 @@ public class TimeService extends MicroService {
         });
         
         sendBroadcast(new TickBroadcast(1, duration));
+        StatisticalFolder.getInstance().updateSystemRuntime(1);
 
     }
 }
