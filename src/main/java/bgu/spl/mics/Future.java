@@ -10,57 +10,75 @@ import java.util.concurrent.TimeUnit;
  * Only private methods may be added to this class.
  * No public constructor is allowed except for the empty constructor.
  */
-public class Future<T> {
-	
-	/**
-	 * This should be the the only public constructor in this class.
-	 */
-	public Future() {
-		//TODO: implement this
-	}
-	
-	/**
-     * retrieves the result the Future object holds if it has been resolved.
-     * This is a blocking method! It waits for the computation in case it has
-     * not been completed.
-     * <p>
-     * @return return the result of type T if it is available, if not wait until it is available.
-     * 	       
-     */
-	public T get() {
-		//TODO: implement this.
-		return null;
-	}
-	
-	/**
-     * Resolves the result of this Future object.
-     */
-	public void resolve (T result) {
-		//TODO: implement this.
-	}
-	
-	/**
-     * @return true if this object has been resolved, false otherwise
-     */
-	public boolean isDone() {
-		//TODO: implement this.
-		return false;
-	}
-	
-	/**
-     * retrieves the result the Future object holds if it has been resolved,
-     * This method is non-blocking, it has a limited amount of time determined
-     * by {@code timeout}
-     * <p>
-     * @param timout 	the maximal amount of time units to wait for the result.
-     * @param unit		the {@link TimeUnit} time units to wait.
-     * @return return the result of type T if it is available, if not, 
-     * 	       wait for {@code timeout} TimeUnits {@code unit}. If time has
-     *         elapsed, return null.
-     */
-	public T get(long timeout, TimeUnit unit) {
-		//TODO: implement this.
-		return null;
-	}
 
+public class Future<T> {
+   private volatile T result = null;
+   private volatile boolean isResolved = false;
+   private final Object lock = new Object();
+
+   public Future() {
+   this.result = null;  // תוצאה לא מוגדרת בהתחלה
+   this.isResolved = false;  // עדיין לא "נפתר"
+}
+
+   public T get() {
+      if (result == null) { 
+         synchronized (lock) {
+            while (!isDone()) {  // Block the thread until the result is available.
+               try {
+                  lock.wait();
+               } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt(); // Handle interruption.
+               }
+            }
+            return result; 
+         }
+      }
+      return result;
+   }
+
+    public void resolve(T result) {
+      if (this.result == null){
+         synchronized (lock) {
+            if (!isDone()) {  // Check if already resolved using isDone()
+               this.result = result;
+               isResolved = true;
+               lock.notifyAll(); // Notify all threads waiting for the result.
+            }
+        }
+      }
+    }
+ 
+
+   public boolean isDone() {// אולי למחוק סנכרון
+      synchronized (lock) {
+         return isResolved;
+      }
+   }
+
+   public T get(long timeout, TimeUnit unit) {
+      if (result == null){
+         synchronized (lock) {
+            if (result == null){
+               long millisTimeout = unit.toMillis(timeout);
+               long startTime = System.currentTimeMillis();
+               while (!isDone()) {
+                  long elapsedTime = System.currentTimeMillis() - startTime;
+                  long remainingTime = millisTimeout - elapsedTime;
+                  if (remainingTime <= 0L) {
+                     return null;
+                  }
+   
+                  try {
+                     lock.wait(remainingTime);
+                  } catch (InterruptedException e) {
+                     Thread.currentThread().interrupt();
+                  }
+               }
+            }
+            return result;
+         }
+      }
+      return result;
+   }
 }
