@@ -131,30 +131,34 @@ public class GurionRockRunner {
         if (config.has("Cameras")) {
             JsonElement camerasElement = config.get("Cameras");
     
-            // אם השדה הוא מערך
+            // Check if "Cameras" is a JSON array
             if (camerasElement.isJsonArray()) {
                 JsonArray camerasArray = camerasElement.getAsJsonArray();
                 for (JsonElement cameraElement : camerasArray) {
                     JsonObject cameraJson = cameraElement.getAsJsonObject();
-                    parseSingleCamera(cameraJson, cameras, configDirectory);
+                    parseSingleCamera(cameraJson, cameras, configDirectory.getAbsolutePath()); // Pass path as String
                 }
             }
-            // אם השדה הוא אובייקט עם CamerasConfigurations
+            // Check if "Cameras" is an object and contains "CamerasConfigurations"
             else if (camerasElement.isJsonObject()) {
                 JsonObject camerasObject = camerasElement.getAsJsonObject();
-                String cameraDataPath = camerasObject.has("camera_datas_path")
-                        ? camerasObject.get("camera_datas_path").getAsString()
-                        : null;
+                if (camerasObject.has("CamerasConfigurations")) {
+                    String cameraDataPath = camerasObject.has("camera_datas_path")
+                            ? camerasObject.get("camera_datas_path").getAsString()
+                            : null;
     
-                if (cameraDataPath != null && camerasObject.has("CamerasConfigurations")) {
-                    JsonArray camerasArray = camerasObject.getAsJsonArray("CamerasConfigurations");
-                    File cameraDataFile = new File(configDirectory, cameraDataPath);
-                    for (JsonElement cameraElement : camerasArray) {
-                        JsonObject cameraJson = cameraElement.getAsJsonObject();
-                        parseSingleCamera(cameraJson, cameras, cameraDataFile.getAbsolutePath());
+                    if (cameraDataPath != null) {
+                        JsonArray camerasArray = camerasObject.getAsJsonArray("CamerasConfigurations");
+                        File cameraDataFile = new File(configDirectory, cameraDataPath);
+                        for (JsonElement cameraElement : camerasArray) {
+                            JsonObject cameraJson = cameraElement.getAsJsonObject();
+                            parseSingleCamera(cameraJson, cameras, cameraDataFile.getAbsolutePath()); // Pass path as String
+                        }
+                    } else {
+                        System.err.println("Invalid Cameras configuration structure: Missing 'camera_datas_path'.");
                     }
                 } else {
-                    System.err.println("Invalid Cameras configuration structure.");
+                    System.err.println("Invalid Cameras configuration structure: Missing 'CamerasConfigurations'.");
                 }
             } else {
                 System.err.println("Unexpected Cameras configuration type.");
@@ -179,43 +183,38 @@ public class GurionRockRunner {
         }
     }
     
-    
-    
-    private static void parseSingleCamera(JsonObject cameraJson, List<Camera> cameras, File configDirectory) {
-        int id = cameraJson.get("id").getAsInt();
-        int frequency = cameraJson.get("frequency").getAsInt();
-        String cameraDataPath = cameraJson.get("camera_datas_path").getAsString();
-        String key = cameraJson.get("camera_key").getAsString();
-    
-        File cameraDataFile = new File(configDirectory, cameraDataPath);
-        System.out.println("Camera detected: ID=" + id + ", Frequency=" + frequency + ", Key=" + key);
-    
-        cameras.add(new Camera(id, frequency, cameraDataFile.getAbsolutePath(), key));
-    }
-    
 
     private static List<LiDarWorkerTracker> parseLidars(JsonObject config, File configDirectory) {
         List<LiDarWorkerTracker> lidars = new ArrayList<>();
-        if (config.has("LiDarWorkers")) {
-            JsonObject lidarsConfig = config.getAsJsonObject("LiDarWorkers");
-            String lidarDataPath = lidarsConfig.get("lidars_data_path").getAsString();
-            File lidarDataFile = new File(configDirectory, lidarDataPath);
+        if (config.has("LiDarWorkers") || config.has("Lidars")) {
+            JsonObject lidarsConfig = config.has("LiDarWorkers")
+                    ? config.getAsJsonObject("LiDarWorkers")
+                    : config.getAsJsonObject("Lidars");
 
-            if (!lidarDataFile.exists()) {
-                System.err.println("LiDAR data file not found: " + lidarDataFile.getAbsolutePath());
-                return lidars;
-            }
+            String lidarDataPath = lidarsConfig.has("lidars_data_path")
+                    ? lidarsConfig.get("lidars_data_path").getAsString()
+                    : null;
 
-            JsonArray lidarsArray = lidarsConfig.getAsJsonArray("LidarConfigurations");
-            for (JsonElement lidarElement : lidarsArray) {
-                JsonObject lidarJson = lidarElement.getAsJsonObject();
-                int id = lidarJson.get("id").getAsInt();
-                int frequency = lidarJson.get("frequency").getAsInt();
-                System.out.println("LiDAR detected: ID=" + id + ", Frequency=" + frequency);
-                lidars.add(new LiDarWorkerTracker(id, frequency, lidarDataFile.getAbsolutePath()));
+            if (lidarDataPath != null) {
+                File lidarDataFile = new File(configDirectory, lidarDataPath);
+                if (!lidarDataFile.exists()) {
+                    System.err.println("LiDAR data file not found: " + lidarDataFile.getAbsolutePath());
+                    return lidars;
+                }
+
+                JsonArray lidarsArray = lidarsConfig.getAsJsonArray("LidarConfigurations");
+                for (JsonElement lidarElement : lidarsArray) {
+                    JsonObject lidarJson = lidarElement.getAsJsonObject();
+                    int id = lidarJson.get("id").getAsInt();
+                    int frequency = lidarJson.get("frequency").getAsInt();
+                    System.out.println("LiDAR detected: ID=" + id + ", Frequency=" + frequency);
+                    lidars.add(new LiDarWorkerTracker(id, frequency, lidarDataFile.getAbsolutePath()));
+                }
+            } else {
+                System.err.println("Missing 'lidars_data_path' in LiDAR configuration.");
             }
         } else {
-            System.err.println("No LiDarWorkers section found in configuration.");
+            System.err.println("No LiDARs section found in configuration.");
         }
         return lidars;
     }
