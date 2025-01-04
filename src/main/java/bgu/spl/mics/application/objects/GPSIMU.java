@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gson.Gson;
@@ -27,6 +28,13 @@ public class GPSIMU {
         this.poseList = loadPosesFromFile(filePath); // Load poses directly into the list
         this.maxTime = calculateMaxTime(); // after this time the status needs to be DOWN
     }
+    public GPSIMU(List<Pose> poseList) {
+    this.currentTick = 0;
+    this.status = STATUS.UP;
+    this.poseList = poseList != null ? Collections.unmodifiableList(poseList) : Collections.emptyList();
+    this.maxTime = calculateMaxTime(); // Calculate the max time from the provided pose list
+}
+
 
     public int getCurrentTick() {
         return currentTick;

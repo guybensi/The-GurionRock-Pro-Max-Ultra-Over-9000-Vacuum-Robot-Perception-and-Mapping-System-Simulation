@@ -48,7 +48,11 @@ public class Camera {
         this.detectedObjectsList = detectedObjectsList != null
                 ? Collections.unmodifiableList(detectedObjectsList)
                 : Collections.emptyList(); // Ensure immutability of preloaded data
+        this.maxTime = detectedObjectsList != null
+                ? detectedObjectsList.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(3)
+                : 3; // Default max time
     }
+    
     
 
     public int getId() {

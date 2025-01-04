@@ -21,6 +21,7 @@ public class LiDarDataBase {
 
     private LiDarDataBase(String filePath) {
         this.cloudPoints = loadDataFromFile(filePath);
+        this.counter.set(cloudPoints.size());
     }
     // Singleton Holder - Lazy Initialization
     private static class SingletonHolderLiDarDataBase {

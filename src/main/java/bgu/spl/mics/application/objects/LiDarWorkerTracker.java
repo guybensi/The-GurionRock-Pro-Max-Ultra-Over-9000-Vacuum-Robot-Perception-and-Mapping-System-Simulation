@@ -28,6 +28,7 @@ public class LiDarWorkerTracker {
         this.maxTime = calculateMaxTime(); // Calculate the maximum time from the database
         
     }
+    
 
     public int getId() {
         return id;
