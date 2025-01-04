@@ -3,6 +3,8 @@ package bgu.spl.mics.application.objects;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import bgu.spl.mics.Event;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -23,9 +25,42 @@ public class FusionSlam {
     
     private ArrayList<LandMark> landmarks  = new ArrayList<>();
     private Map<Integer, Pose> posesByTime = new HashMap<>();
-    private int serviceCounter = 0;
     private int tick = 0;
+
+    // i added for main-------------
+    private final AtomicInteger activeCameras = new AtomicInteger(0);
+    private int activeSensors = 0;
+
+    // Setter for active cameras
+    public void setActiveCameras(int activeCameras) {
+        this.activeCameras.set(activeCameras);
+    }
+
+    // Setter for total active sensors
+    public void setActiveSensors(int activeSensors) {
+        this.activeSensors = activeSensors;
+    }
+
+    // Getter for active cameras
+    public int getActiveCameras() {
+        return activeCameras.get();
+    }
+
+    // Getter for total active sensors
+    public int getActiveSensors() {
+        return activeSensors;
+    }
     
+    public boolean isTerminated (){
+        return (this.activeSensors <= 0);
+    }
+    public int getserviceCounter(){
+        return activeSensors;
+    }
+
+    public void decreaseServiceCounter() {
+        this.activeSensors--;
+    } 
     
     /**
      * Updates the current pose of the robot.
@@ -47,9 +82,6 @@ public class FusionSlam {
         return tick;
     }
 
-    public void setserviceCounter(int count){
-        this.serviceCounter = count;
-    }
 
     /**
      * Processes a tracked object event to update or add landmarks.
@@ -162,18 +194,7 @@ public class FusionSlam {
         }
         return sb.toString();
     }
-    public boolean isTerminated (){
-        return (serviceCounter <= 0);
-    }
-    public int getserviceCounter(){
-        return serviceCounter;
-    }
-    public void increasServiceCounter(){
-        this.serviceCounter++;
-    }
-    public void decreaseServiceCounter() {
-        this.serviceCounter--;
-    } 
+    
   
     public void generateOutputFileWithoutError(String filePath) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();

@@ -40,17 +40,16 @@ public class Camera {
             this.maxTime = 3; // Default max time
         }
     }
-    public Camera(int id, int frequency, List<StampedDetectedObject> detectedObjectsList) {
+    // Constructor for main ----------------
+    public Camera(int id, int frequency, List<StampedDetectedObject> detectedObjectsList, int maxTime) {
         this.id = id;
         this.frequency = frequency;
-        this.status = STATUS.UP;
-        this.errMString = null;
+        this.status = STATUS.UP; // Default status is UP
         this.detectedObjectsList = detectedObjectsList != null
                 ? Collections.unmodifiableList(detectedObjectsList)
                 : Collections.emptyList(); // Ensure immutability of preloaded data
-        this.maxTime = detectedObjectsList != null
-                ? detectedObjectsList.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(3)
-                : 3; // Default max time
+        this.maxTime = maxTime;
+        this.errMString = null;
     }
     
     
