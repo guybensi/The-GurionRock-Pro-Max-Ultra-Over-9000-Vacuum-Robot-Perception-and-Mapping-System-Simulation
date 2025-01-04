@@ -89,7 +89,6 @@ public class CameraService extends MicroService {
                 sendBroadcast(new TerminatedBroadcast(getName()));     
             }
         });
-//--------------------------------------זה לא נכון צריך לתקן ולהבין מה לעשות עם ההרשמות האלו ------------------------------------------------------------
         // Subscribe to TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
             if (broadcast.getSenderId() == "TimeService"){

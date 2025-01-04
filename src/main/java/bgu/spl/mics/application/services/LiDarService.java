@@ -52,7 +52,7 @@ public class LiDarService extends MicroService {
                 }
                 TrackedObjectsEvent readyEvent = eventQueue.poll();
                 complete(readyEvent.getHandeledEvent(), true);
-                lidarWorkerTracker.setLastTrackedObjects(readyEvent.getTrackedObjects());//////אורי הוסיפה
+                lidarWorkerTracker.setLastTrackedObjects(readyEvent.getTrackedObjects());
                 System.out.println(getName() + ": sent TrackedObjectsEvent at time" + currentTime+ "for object from time" + event.getTime() );
                 sendEvent(readyEvent);
                 StatisticalFolder.getInstance().updateNumDetectedObjects(
@@ -96,7 +96,7 @@ public class LiDarService extends MicroService {
                         complete(event, true);
                         System.out.println(getName() + ": sent TrackedObjectsEvent at time" + currTime + "for object from time" + event.getStampedDetectedObjects().getTime() );
                         sendEvent(toSendEvent);
-                        lidarWorkerTracker.setLastTrackedObjects(TrackedObjects);//////אורי הוסיפה
+                        lidarWorkerTracker.setLastTrackedObjects(TrackedObjects);
                         StatisticalFolder.getInstance().updateNumTrackedObjects(TrackedObjects.size());
                         StatisticalFolder.getInstance().updateLastFrame(getName(), toSendEvent);
                     }

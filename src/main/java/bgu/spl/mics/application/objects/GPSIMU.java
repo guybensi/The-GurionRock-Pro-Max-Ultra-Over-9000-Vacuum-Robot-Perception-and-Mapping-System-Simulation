@@ -25,14 +25,14 @@ public class GPSIMU {
     public GPSIMU(String filePath) {
         this.currentTick = 0;
         this.status = STATUS.UP;
-        this.poseList = loadPosesFromFile(filePath); // Load poses directly into the list
-        this.maxTime = calculateMaxTime(); // after this time the status needs to be DOWN
+        this.poseList = loadPosesFromFile(filePath); 
+        this.maxTime = calculateMaxTime(); 
     }
     public GPSIMU(List<Pose> poseList) {
     this.currentTick = 0;
     this.status = STATUS.UP;
     this.poseList = poseList != null ? Collections.unmodifiableList(poseList) : Collections.emptyList();
-    this.maxTime = calculateMaxTime(); // Calculate the max time from the provided pose list
+    this.maxTime = calculateMaxTime(); 
 }
 
 

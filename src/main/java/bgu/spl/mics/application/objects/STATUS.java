@@ -25,13 +25,12 @@ public enum STATUS {
             case "ERROR":
                 return ERROR;
             default:
-            //לא בטוח שצריך
                 System.out.println("Invalid status string: " + statusString);
                 return ERROR;  // Default to ERROR if invalid
         }
     }
 
     public static String toString(STATUS status) {
-        return status.name();  // Returns the name of the enum (e.g., "UP")
+        return status.name();  
     }
 }

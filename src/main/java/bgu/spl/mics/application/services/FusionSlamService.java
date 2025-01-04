@@ -71,15 +71,14 @@ public class FusionSlamService extends MicroService {
         subscribeBroadcast(CrashedBroadcast.class, broadcast -> {
             System.out.println(getName() + ": got crashed and terminate");
             terminate();
-            String errorDescription = broadcast.getErrorMessage(); // Populate if isError = true
-            String faultySensor = broadcast.getSenderId(); // Populate if isError = true
+            String errorDescription = broadcast.getErrorMessage(); 
+            String faultySensor = broadcast.getSenderId(); 
             System.out.println(getName() + ": is printing an output file");
             fusionSlam.generateOutputFileWithError("output_file.json", errorDescription, faultySensor);
         });
         subscribeBroadcast(TerminateMe.class, broadcast -> {
             fusionSlam.decreaseServiceCounter();
             if (fusionSlam.getserviceCounter() == 0) {
-                // Generate output file
                 System.out.println(getName() + ": counter is 0 to terminate");
                 terminate();
                 System.out.println(getName() + ": is terminated");

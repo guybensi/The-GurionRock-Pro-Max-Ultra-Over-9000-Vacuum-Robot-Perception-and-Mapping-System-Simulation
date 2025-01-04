@@ -31,7 +31,7 @@ public class GurionRockRunner {
         }
 
         try (FileReader reader = new FileReader(configFilePath)) {
-            Gson gson = new Gson();
+            //Gson gson = new Gson();
             JsonObject config = JsonParser.parseReader(reader).getAsJsonObject();
 
             // Parse Cameras

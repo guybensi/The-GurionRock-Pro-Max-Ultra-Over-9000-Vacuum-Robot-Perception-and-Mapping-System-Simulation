@@ -9,13 +9,12 @@ import bgu.spl.mics.Event;
 public class StatisticalFolder {
   
     // Fields using AtomicInteger for thread-safety
-    private AtomicInteger systemRuntime;          // The total runtime of the system (in ticks)
-    private AtomicInteger numDetectedObjects;     // The cumulative count of objects detected by all cameras
-    private AtomicInteger numTrackedObjects;      // The cumulative count of objects tracked by all LiDAR workers
-    private AtomicInteger numLandmarks;           // The total number of unique landmarks identified
-    private Map<String, Event<?>> lastFrames;      // A map where the key is the sensor's name and value is the last frame it sent
+    private AtomicInteger systemRuntime;        
+    private AtomicInteger numDetectedObjects;     
+    private AtomicInteger numTrackedObjects;   
+    private AtomicInteger numLandmarks;           
+    private Map<String, Event<?>> lastFrames;      
 
-    // Constructor
     public StatisticalFolder() {
         this.systemRuntime = new AtomicInteger(0);
         this.numDetectedObjects = new AtomicInteger(0);
@@ -32,7 +31,6 @@ public class StatisticalFolder {
         return SingletonHolderStatisticalFolder.INSTANCE;
     }
     
-    // Getters
     public int getSystemRuntime() {
         return systemRuntime.get();   
     }
@@ -49,28 +47,27 @@ public class StatisticalFolder {
         return numLandmarks.get();
     }
 
-    // Methods to update the statistics
+
     public void updateSystemRuntime(int timeTick) {
-        this.systemRuntime.addAndGet(timeTick); // Increment system runtime by the time tick
+        this.systemRuntime.addAndGet(timeTick); 
     }
 
     public void updateNumDetectedObjects(int detectedObjectsCount) {
-        this.numDetectedObjects.addAndGet(detectedObjectsCount); // Increment detected objects count
+        this.numDetectedObjects.addAndGet(detectedObjectsCount); 
     }
 
     public void updateNumTrackedObjects(int trackedObjectsCount) {
-        this.numTrackedObjects.addAndGet(trackedObjectsCount); // Increment tracked objects count
+        this.numTrackedObjects.addAndGet(trackedObjectsCount); 
     }
 
     public void updateNumLandmarks(int newLandmarksCount) {
-        this.numLandmarks.addAndGet(newLandmarksCount); // Increment landmarks count
+        this.numLandmarks.addAndGet(newLandmarksCount); 
     }
-   // Method to handle and update the last frame for a specific sensor
+
     public void updateLastFrame(String name, Event<?> event) {
         lastFrames.put(name, event);
     }
 
-    // Method to get the last frame sent by each sensor
     public Map<String, Event<?>> getLastFrames() {
         return lastFrames;
     }

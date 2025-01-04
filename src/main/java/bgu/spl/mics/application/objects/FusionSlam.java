@@ -21,8 +21,8 @@ public class FusionSlam {
         return SingletonHolderFusionSlam.INSTANCE;
     }
     
-    private ArrayList<LandMark> landmarks  = new ArrayList<>(); // Dynamic array of landmarks
-    private Map<Integer, Pose> posesByTime = new HashMap<>(); // Map to hold poses by time
+    private ArrayList<LandMark> landmarks  = new ArrayList<>();
+    private Map<Integer, Pose> posesByTime = new HashMap<>();
     private int serviceCounter = 0;
     private int tick = 0;
     
@@ -33,7 +33,7 @@ public class FusionSlam {
      * @param pose The new pose.
      */
     public void addPose(Pose pose) {
-        posesByTime.put(pose.getTime(), pose); // Add the pose to the map
+        posesByTime.put(pose.getTime(), pose); 
 
     }
     
@@ -60,17 +60,15 @@ public class FusionSlam {
         for (TrackedObject obj : trackedObjects) {
             String id = obj.getId();
             Pose relaventPose = getPoseAtTime(obj.getTime());
-            if (relaventPose == null) {// לא אמור לקרות, רק בשביל הבדיקות
+            if (relaventPose == null) {// just for test
                 System.out.println("No pose found for time: " + obj.getTime() + ". Skipping object: " + id);
-                continue; // דילוג על האובייקט אם אין פוזה מתאימה
+                continue; 
             }
             List<CloudPoint> globalCoordinates = transformToGlobal(obj.getCoordinates(), relaventPose);
             LandMark existingLandmark = findLandMarkById(id);
             if (existingLandmark != null) {
-                // Update existing landmark by averaging coordinates
                 updateLandmarkCoordinates(existingLandmark, globalCoordinates);
             } else {
-                // Add new landmark
                 LandMark newLandmark = new LandMark(id, obj.getDescription(), globalCoordinates);
                 landmarks.add(newLandmark);
                 StatisticalFolder.getInstance().updateNumLandmarks(1);
@@ -98,13 +96,9 @@ public class FusionSlam {
 
             updatedCoordinates.add(new CloudPoint(avgX, avgY));
         }
-
-        // Add any remaining points from newCoordinates
         if (newCoordinates.size() > existingCoordinates.size()) {
             updatedCoordinates.addAll(newCoordinates.subList(size, newCoordinates.size()));
         }
-
-        // Add any remaining points from existingCoordinates
         if (existingCoordinates.size() > newCoordinates.size()) {
             updatedCoordinates.addAll(existingCoordinates.subList(size, existingCoordinates.size()));
         }
@@ -142,11 +136,8 @@ public class FusionSlam {
         double sinYaw = Math.sin(yawRadians);
     
         for (CloudPoint point : localCoordinates) {
-            // חישוב הקואורדינטות הגלובליות
             double globalX = point.getX() * cosYaw - point.getY() * sinYaw + pose.getX();
             double globalY = point.getX() * sinYaw + point.getY() * cosYaw + pose.getY();
-    
-            // הוספת הנקודה המחושבת
             globalCoordinates.add(new CloudPoint(globalX, globalY));
         }
     

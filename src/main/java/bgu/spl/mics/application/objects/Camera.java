@@ -29,7 +29,7 @@ public class Camera {
         this.frequency = frequency;
         this.status = STATUS.UP;
         this.errMString = null;
-        this.detectedObjectsList = new ArrayList<>(); // יוזמה של רשימה ריקה
+        this.detectedObjectsList = new ArrayList<>(); 
         loadDetectedObjectsFromFile(filePath, cameraKey);
         if (!detectedObjectsList.isEmpty()) {
             this.maxTime = detectedObjectsList.stream()
@@ -37,7 +37,7 @@ public class Camera {
                               .max()
                               .orElse(4);
         } else {
-            this.maxTime = 3; // ברירת מחדל במידה ולא נטענו נתונים
+            this.maxTime = 3; // Default max time
         }
     }
     public Camera(int id, int frequency, List<StampedDetectedObject> detectedObjectsList) {

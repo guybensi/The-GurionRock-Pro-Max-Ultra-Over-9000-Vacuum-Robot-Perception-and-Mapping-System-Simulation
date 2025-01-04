@@ -56,7 +56,6 @@ public class PoseService extends MicroService {
                 sendBroadcast(new TerminatedBroadcast(getName()));     
             }
         });
-        //--------------------------------------לבדוק------------------------------------------------------------
         // Subscribe to TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
             if (broadcast.getSenderId() == "TimeService"){
