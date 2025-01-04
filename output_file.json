@@ -228,19 +228,13 @@
       "x": 2.0,
       "y": 5.8,
       "yaw": 103.09
-    },
-    {
-      "time": 14,
-      "x": 3.0,
-      "y": 6.3,
-      "yaw": 120.35
     }
   ],
   "faultySensor": "camera1",
   "statistics": {
-    "systemRuntime": 14,
-    "numDetectedObjects": 9,
     "numLandmarks": 7,
-    "numTrackedObjects": 9
+    "numDetectedObjects": 17,
+    "systemRuntime": 13,
+    "numTrackedObjects": 1
   }
 }
