@@ -3,7 +3,7 @@ package bgu.spl.mics.application.objects;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
-
+import bgu.spl.mics.Event;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -183,11 +183,11 @@ public class FusionSlam {
     public void decreaseServiceCounter() {
         this.serviceCounter--;
     } 
-    
-    public void generateOutputFile(String filePath, boolean isError, String errorDescription, String faultySensor, Map<String, Object> lastFrames, List<Pose> poses) {
+  
+    public void generateOutputFileWithoutError(String filePath) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         Map<String, Object> outputData = new HashMap<>();
-    
+
         // Add statistics
         StatisticalFolder stats = StatisticalFolder.getInstance();
         Map<String, Integer> statistics = new HashMap<>();
@@ -196,22 +196,18 @@ public class FusionSlam {
         statistics.put("numTrackedObjects", stats.getNumTrackedObjects());
         statistics.put("numLandmarks", stats.getNumLandmarks());
         outputData.put("statistics", statistics);
-    
+
         // Convert landMarks to Map<String, LandMark> for JSON
         Map<String, LandMark> landMarksMap = new HashMap<>();
         for (LandMark landmark : getLandmarks()) {
             landMarksMap.put(landmark.getId(), landmark);
         }
         outputData.put("landMarks", landMarksMap);
-    
-        // Handle error-specific fields
-        if (isError) {
-            outputData.put("Error", errorDescription);
-            outputData.put("faultySensor", faultySensor);
-            outputData.put("lastFrames", lastFrames);
-            outputData.put("poses", poses);
-        }
-    
+
+        // Add poses
+        List<Pose> poses = getAllPoses();
+        outputData.put("poses", poses);
+
         // Write JSON to file
         try (FileWriter writer = new FileWriter(filePath)) {
             gson.toJson(outputData, writer);
@@ -219,8 +215,50 @@ public class FusionSlam {
             e.printStackTrace();
         }
     }
-    
 
+    public void generateOutputFileWithError(String filePath, String errorDescription, String faultySensor) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        Map<String, Object> outputData = new HashMap<>();
+
+        // Add error-specific fields
+        outputData.put("error", errorDescription);
+        outputData.put("faultySensor", faultySensor);
+
+        // Use getLastFrames directly
+        Map<String, Event<?>> lastFrames = StatisticalFolder.getInstance().getLastFrames();
+        outputData.put("lastFrames", lastFrames);
+
+        // Add poses
+        List<Pose> poses = getAllPoses();
+        outputData.put("poses", poses);
+
+        // Add statistics
+        StatisticalFolder stats = StatisticalFolder.getInstance();
+        Map<String, Integer> statistics = new HashMap<>();
+        statistics.put("systemRuntime", stats.getSystemRuntime());
+        statistics.put("numDetectedObjects", stats.getNumDetectedObjects());
+        statistics.put("numTrackedObjects", stats.getNumTrackedObjects());
+        statistics.put("numLandmarks", stats.getNumLandmarks());
+        outputData.put("statistics", statistics);
+
+        // Convert landMarks to Map<String, LandMark> for JSON
+        Map<String, LandMark> landMarksMap = new HashMap<>();
+        for (LandMark landmark : getLandmarks()) {
+            landMarksMap.put(landmark.getId(), landmark);
+        }
+        outputData.put("landMarks", landMarksMap);
+
+        // Write JSON to file
+        try (FileWriter writer = new FileWriter(filePath)) {
+            gson.toJson(outputData, writer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<Pose> getAllPoses() {
+        return new ArrayList<>(posesByTime.values());
+    }
     public List<Pose> getPosesUpToTick(int time) {
         List<Pose> poses = new ArrayList<>();
         for (Map.Entry<Integer, Pose> entry : posesByTime.entrySet()) {

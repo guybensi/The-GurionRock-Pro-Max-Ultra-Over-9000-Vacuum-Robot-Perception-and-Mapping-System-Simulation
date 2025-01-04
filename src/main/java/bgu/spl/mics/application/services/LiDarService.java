@@ -57,6 +57,8 @@ public class LiDarService extends MicroService {
                 sendEvent(readyEvent);
                 StatisticalFolder.getInstance().updateNumDetectedObjects(
                     readyEvent.getTrackedObjects().size());
+                StatisticalFolder.getInstance().updateLastFrame(getName(), readyEvent);
+
             } 
             if (eventQueue.isEmpty() && (lidarWorkerTracker.getStatus()==STATUS.DOWN)){
                 System.out.println(getName() + ": is down, finished and terminated");
@@ -96,6 +98,7 @@ public class LiDarService extends MicroService {
                         sendEvent(toSendEvent);
                         lidarWorkerTracker.setLastTrackedObjects(TrackedObjects);//////אורי הוסיפה
                         StatisticalFolder.getInstance().updateNumTrackedObjects(TrackedObjects.size());
+                        StatisticalFolder.getInstance().updateLastFrame(getName(), toSendEvent);
                     }
                     else{
                         eventQueue.add(toSendEvent);

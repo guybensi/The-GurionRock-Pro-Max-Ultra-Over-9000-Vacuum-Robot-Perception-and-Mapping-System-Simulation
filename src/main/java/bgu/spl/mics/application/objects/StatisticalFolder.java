@@ -1,6 +1,10 @@
 package bgu.spl.mics.application.objects;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import bgu.spl.mics.Event;
 
 public class StatisticalFolder {
   
@@ -9,6 +13,7 @@ public class StatisticalFolder {
     private AtomicInteger numDetectedObjects;     // The cumulative count of objects detected by all cameras
     private AtomicInteger numTrackedObjects;      // The cumulative count of objects tracked by all LiDAR workers
     private AtomicInteger numLandmarks;           // The total number of unique landmarks identified
+    private Map<String, Event<?>> lastFrames;      // A map where the key is the sensor's name and value is the last frame it sent
 
     // Constructor
     public StatisticalFolder() {
@@ -16,6 +21,7 @@ public class StatisticalFolder {
         this.numDetectedObjects = new AtomicInteger(0);
         this.numTrackedObjects = new AtomicInteger(0);
         this.numLandmarks = new AtomicInteger(0);
+        this.lastFrames = new ConcurrentHashMap<>();
     }
     // Singleton Holder for thread-safe מימוש כמו בכיתה
     private static class SingletonHolderStatisticalFolder {
@@ -58,5 +64,14 @@ public class StatisticalFolder {
 
     public void updateNumLandmarks(int newLandmarksCount) {
         this.numLandmarks.addAndGet(newLandmarksCount); // Increment landmarks count
+    }
+   // Method to handle and update the last frame for a specific sensor
+    public void updateLastFrame(String name, Event<?> event) {
+        lastFrames.put(name, event);
+    }
+
+    // Method to get the last frame sent by each sensor
+    public Map<String, Event<?>> getLastFrames() {
+        return lastFrames;
     }
 }

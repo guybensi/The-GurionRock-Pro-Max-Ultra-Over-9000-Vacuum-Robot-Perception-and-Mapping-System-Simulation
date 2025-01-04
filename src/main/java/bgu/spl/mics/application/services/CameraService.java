@@ -1,11 +1,7 @@
 package bgu.spl.mics.application.services;
 
 import java.util.ArrayDeque;
-//import java.util.List;
 import java.util.Queue;
-
-//import bgu.spl.mics.Broadcast;
-//import bgu.spl.mics.Broadcast;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.CrashedBroadcast;
 import bgu.spl.mics.application.messages.DetectObjectsEvent;
@@ -77,6 +73,7 @@ public class CameraService extends MicroService {
                         StatisticalFolder.getInstance().updateNumDetectedObjects(
                                 readyEvent.getStampedDetectedObjects().getDetectedObjects().size()
                         );
+                        StatisticalFolder.getInstance().updateLastFrame(getName(), readyEvent);
                     }  
                 }
                 if (camera.getStatus() == STATUS.DOWN){
