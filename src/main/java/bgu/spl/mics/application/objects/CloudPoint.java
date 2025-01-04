@@ -24,6 +24,7 @@ public class CloudPoint {
 
     @Override
     public String toString() {
-        return "CloudPoint{x=" + x + ", y=" + y + "}";
+        return String.format("{\"x\":%.2f,\"y\":%.2f}", x, y);
     }
+
 }

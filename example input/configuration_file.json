@@ -5,7 +5,7 @@
       "frequency": 0,
       "camera_datas_path": "./camera_data.json",
       "camera_key": "camera1"
-    },
+    }
   ],
   "Lidars": {
     "LidarConfigurations": [

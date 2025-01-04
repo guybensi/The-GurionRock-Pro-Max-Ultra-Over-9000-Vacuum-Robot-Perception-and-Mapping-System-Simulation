@@ -51,26 +51,8 @@ public class LandMark {
     // Optional: Override toString() to provide a string representation of the landmark
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("LandMark{id='").append(id)
-          .append("', description='").append(description)
-          .append("', coordinates=");
-        
-        // Print all coordinates
-        for (CloudPoint point : coordinates) {
-            sb.append(point).append(", ");
-        }
-        sb.append("}");
-        return sb.toString();
+        return String.format("{\"id\":\"%s\",\"description\":\"%s\",\"coordinates\":%s}", id, description, coordinates);
     }
-/* 
-    public void setId(String id) {
-        this.id = id;
-    }
-    public void setDescription(String description) {
-        this.description = description;
-    }
-    
-*/
+
 
 }

@@ -39,7 +39,8 @@ public class Pose {
     // Override the toString method for a string representation of the Pose
     @Override
     public String toString() {
-        return "Pose{x=" + x + ", y=" + y + ", yaw=" + yaw + ", time=" + time + "}";
+        return String.format("{\"time\":%d,\"x\":%.2f,\"y\":%.2f,\"yaw\":%.2f}", time, x, y, yaw);
     }
+
 }
 

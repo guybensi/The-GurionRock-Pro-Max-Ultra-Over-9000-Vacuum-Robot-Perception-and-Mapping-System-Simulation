@@ -3,6 +3,7 @@ package bgu.spl.mics.application.services;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.CrashedBroadcast;
 import bgu.spl.mics.application.messages.PoseEvent;
+import bgu.spl.mics.application.messages.TerminateMe;
 import bgu.spl.mics.application.messages.TerminatedBroadcast;
 import bgu.spl.mics.application.messages.TickBroadcast;
 import bgu.spl.mics.application.objects.GPSIMU;
@@ -61,7 +62,7 @@ public class PoseService extends MicroService {
             if (broadcast.getSenderId() == "TimeService"){
                 System.out.println(getName() + ": got TerminatedBroadcast from TimeService");
                 terminate();
-                sendBroadcast(new TerminatedBroadcast(getName()));  
+                sendBroadcast(new TerminateMe(getName()));  
             }
         });
         // Subscribe to TerminatedBroadcast

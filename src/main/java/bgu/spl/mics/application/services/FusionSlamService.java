@@ -1,9 +1,6 @@
 package bgu.spl.mics.application.services;
 
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.PriorityQueue;
 import bgu.spl.mics.*;
 import bgu.spl.mics.application.objects.*;
@@ -69,18 +66,6 @@ public class FusionSlamService extends MicroService {
            fusionSlam.setTick(broadcast.getTime());
         });
 
-        // Register for TerminatedBroadcast
-        subscribeBroadcast(TerminatedBroadcast.class, broadcast -> {
-            if (broadcast.getSenderId() != "TimeService"){
-                fusionSlam.decreaseServiceCounter();
-                if (fusionSlam.getserviceCounter() == 0) {
-                    // Generate output file
-                    System.out.println(getName() + ": counter is 0 to terminate");
-                    terminate();
-                    System.out.println(getName() + ": is terminated");
-                    fusionSlam.generateOutputFileWithoutError("output_file.json");
-                }
-        });
 
         // Register for CrashedBroadcast
         subscribeBroadcast(CrashedBroadcast.class, broadcast -> {
@@ -90,6 +75,17 @@ public class FusionSlamService extends MicroService {
             String faultySensor = broadcast.getSenderId(); // Populate if isError = true
             System.out.println(getName() + ": is printing an output file");
             fusionSlam.generateOutputFileWithError("output_file.json", errorDescription, faultySensor);
+        });
+        subscribeBroadcast(TerminateMe.class, broadcast -> {
+            fusionSlam.decreaseServiceCounter();
+            if (fusionSlam.getserviceCounter() == 0) {
+                // Generate output file
+                System.out.println(getName() + ": counter is 0 to terminate");
+                terminate();
+                System.out.println(getName() + ": is terminated");
+                System.out.println(getName() + ": is printing an output file");
+                fusionSlam.generateOutputFileWithoutError("output_file.json");
+            }
         });
     }
 }

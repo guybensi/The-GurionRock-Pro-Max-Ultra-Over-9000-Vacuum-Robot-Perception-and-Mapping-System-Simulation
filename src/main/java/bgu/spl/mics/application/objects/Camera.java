@@ -82,26 +82,76 @@ public class Camera {
         try (FileReader reader = new FileReader(filePath)) {
             System.out.println("Camera attempting to read file: " + new File(filePath).getAbsolutePath());
             Gson gson = new Gson();
-            java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {}.getType();
-            Map<String, List<List<StampedDetectedObject>>> cameraData = gson.fromJson(reader, type);
-            List<List<StampedDetectedObject>> nestedCameraObjects = cameraData.get(cameraKey);
-            if (nestedCameraObjects != null) {
-                List<StampedDetectedObject> cameraObjects = new ArrayList<>();
-                for (List<StampedDetectedObject> list : nestedCameraObjects) {
-                    cameraObjects.addAll(list);
+    
+            // קריאת הנתונים מהקובץ
+            java.lang.reflect.Type type = new TypeToken<Map<String, Object>>() {}.getType();
+            Map<String, Object> cameraData = gson.fromJson(reader, type);
+    
+            // בדיקת קיום המפתח עבור המצלמה
+            if (!cameraData.containsKey(cameraKey)) {
+                System.err.println("Camera key '" + cameraKey + "' not found in file.");
+                detectedObjectsList = new ArrayList<>();
+                return;
+            }
+    
+            Object rawData = cameraData.get(cameraKey);
+    
+            if (rawData instanceof List) {
+                // בדיקה האם מדובר ברשימה שטוחה או מקוננת
+                List<?> dataList = (List<?>) rawData;
+    
+                if (!dataList.isEmpty() && dataList.get(0) instanceof List) {
+                    // רשימה מקוננת
+                    List<List<StampedDetectedObject>> nestedList = gson.fromJson(
+                        gson.toJson(dataList),
+                        new TypeToken<List<List<StampedDetectedObject>>>() {}.getType()
+                    );
+    
+                    detectedObjectsList = new ArrayList<>();
+                    for (List<StampedDetectedObject> innerList : nestedList) {
+                        detectedObjectsList.addAll(innerList);
+                    }
+    
+                } else {
+                    // רשימה שטוחה
+                    detectedObjectsList = gson.fromJson(
+                        gson.toJson(dataList),
+                        new TypeToken<List<StampedDetectedObject>>() {}.getType()
+                    );
                 }
-                detectedObjectsList = new ArrayList<>(cameraObjects);
-                maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(4);
+    
+                // חישוב הזמן המקסימלי
+                maxTime = detectedObjectsList.stream()
+                                             .mapToInt(StampedDetectedObject::getTime)
+                                             .max()
+                                             .orElse(0);
+    
+                System.out.println("Camera " + id + " successfully loaded " + detectedObjectsList.size() + " detected objects.");
             } else {
+                System.err.println("Camera key '" + cameraKey + "' contains invalid data structure.");
                 detectedObjectsList = new ArrayList<>();
             }
-            System.out.println("Camera " + id + " loaded " + detectedObjectsList.size() + " detected objects.");
         } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
             detectedObjectsList = new ArrayList<>();
         } catch (Exception e) {
+            System.err.println("Unexpected error while processing file: " + e.getMessage());
+            e.printStackTrace();
             detectedObjectsList = new ArrayList<>();
         }
+    
+        // הדפסת הנתונים שנטענו
+        if (!detectedObjectsList.isEmpty()) {
+            System.out.println("Camera " + id + " detected objects:");
+            for (StampedDetectedObject obj : detectedObjectsList) {
+                System.out.println("  Time: " + obj.getTime() + ", Objects: " + obj.getDetectedObjects());
+            }
+        } else {
+            System.err.println("Camera " + id + " detectedObjectsList is empty.");
+        }
     }
+    
+    
 
     public void checkIfDone(int currentTime) {
         if (currentTime >= this.maxTime) {

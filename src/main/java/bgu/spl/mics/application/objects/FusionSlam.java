@@ -187,27 +187,27 @@ public class FusionSlam {
     public void generateOutputFileWithoutError(String filePath) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         Map<String, Object> outputData = new HashMap<>();
-
+    
         // Add statistics
         StatisticalFolder stats = StatisticalFolder.getInstance();
-        Map<String, Integer> statistics = new HashMap<>();
-        statistics.put("systemRuntime", stats.getSystemRuntime());
-        statistics.put("numDetectedObjects", stats.getNumDetectedObjects());
-        statistics.put("numTrackedObjects", stats.getNumTrackedObjects());
-        statistics.put("numLandmarks", stats.getNumLandmarks());
+        Map<String, Object> statistics = Map.of(
+            "systemRuntime", stats.getSystemRuntime(),
+            "numDetectedObjects", stats.getNumDetectedObjects(),
+            "numTrackedObjects", stats.getNumTrackedObjects(),
+            "numLandmarks", stats.getNumLandmarks()
+        );
         outputData.put("statistics", statistics);
-
-        // Convert landMarks to Map<String, LandMark> for JSON
-        Map<String, LandMark> landMarksMap = new HashMap<>();
+    
+        // Add landmarks
+        Map<String, Object> landmarks = new HashMap<>();
         for (LandMark landmark : getLandmarks()) {
-            landMarksMap.put(landmark.getId(), landmark);
+            landmarks.put(landmark.getId(), landmark); // Gson will handle serialization
         }
-        outputData.put("landMarks", landMarksMap);
-
+        outputData.put("landMarks", landmarks);
+    
         // Add poses
-        List<Pose> poses = getAllPoses();
-        outputData.put("poses", poses);
-
+        outputData.put("poses", getAllPoses()); // Gson will serialize the list
+    
         // Write JSON to file
         try (FileWriter writer = new FileWriter(filePath)) {
             gson.toJson(outputData, writer);
@@ -215,39 +215,40 @@ public class FusionSlam {
             e.printStackTrace();
         }
     }
+    
 
     public void generateOutputFileWithError(String filePath, String errorDescription, String faultySensor) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         Map<String, Object> outputData = new HashMap<>();
-
+    
         // Add error-specific fields
         outputData.put("error", errorDescription);
         outputData.put("faultySensor", faultySensor);
-
-        // Use getLastFrames directly
+    
+        // Add last frames
         Map<String, Event<?>> lastFrames = StatisticalFolder.getInstance().getLastFrames();
         outputData.put("lastFrames", lastFrames);
-
+    
         // Add poses
-        List<Pose> poses = getAllPoses();
-        outputData.put("poses", poses);
-
+        outputData.put("poses", getAllPoses());
+    
         // Add statistics
         StatisticalFolder stats = StatisticalFolder.getInstance();
-        Map<String, Integer> statistics = new HashMap<>();
-        statistics.put("systemRuntime", stats.getSystemRuntime());
-        statistics.put("numDetectedObjects", stats.getNumDetectedObjects());
-        statistics.put("numTrackedObjects", stats.getNumTrackedObjects());
-        statistics.put("numLandmarks", stats.getNumLandmarks());
+        Map<String, Object> statistics = Map.of(
+            "systemRuntime", stats.getSystemRuntime(),
+            "numDetectedObjects", stats.getNumDetectedObjects(),
+            "numTrackedObjects", stats.getNumTrackedObjects(),
+            "numLandmarks", stats.getNumLandmarks()
+        );
         outputData.put("statistics", statistics);
-
-        // Convert landMarks to Map<String, LandMark> for JSON
-        Map<String, LandMark> landMarksMap = new HashMap<>();
+    
+        // Add landmarks
+        Map<String, Object> landmarks = new HashMap<>();
         for (LandMark landmark : getLandmarks()) {
-            landMarksMap.put(landmark.getId(), landmark);
+            landmarks.put(landmark.getId(), landmark);
         }
-        outputData.put("landMarks", landMarksMap);
-
+        outputData.put("landMarks", landmarks);
+    
         // Write JSON to file
         try (FileWriter writer = new FileWriter(filePath)) {
             gson.toJson(outputData, writer);
@@ -255,6 +256,7 @@ public class FusionSlam {
             e.printStackTrace();
         }
     }
+    
 
     public List<Pose> getAllPoses() {
         return new ArrayList<>(posesByTime.values());

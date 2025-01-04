@@ -5,6 +5,7 @@ import java.util.Queue;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.CrashedBroadcast;
 import bgu.spl.mics.application.messages.DetectObjectsEvent;
+import bgu.spl.mics.application.messages.TerminateMe;
 import bgu.spl.mics.application.messages.TerminatedBroadcast;
 import bgu.spl.mics.application.messages.TickBroadcast;
 import bgu.spl.mics.application.objects.Camera;
@@ -94,7 +95,7 @@ public class CameraService extends MicroService {
             if (broadcast.getSenderId() == "TimeService"){
                 System.out.println(getName() + ": got TerminatedBroadcast from TimeService");
                 terminate();
-                sendBroadcast(new TerminatedBroadcast(getName()));  
+                sendBroadcast(new TerminateMe(getName()));  
             }
         });
         subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
