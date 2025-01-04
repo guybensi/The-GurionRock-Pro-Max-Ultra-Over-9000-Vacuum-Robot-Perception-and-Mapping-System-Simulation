@@ -86,7 +86,7 @@ public class Camera {
             Gson gson = new Gson();
             java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {}.getType();
             Map<String, List<List<StampedDetectedObject>>> cameraData = gson.fromJson(reader, type);
-    
+            
             // שליפת הנתונים עבור המצלמה המבוקשת
             List<List<StampedDetectedObject>> nestedList = cameraData.get(cameraKey);
     
