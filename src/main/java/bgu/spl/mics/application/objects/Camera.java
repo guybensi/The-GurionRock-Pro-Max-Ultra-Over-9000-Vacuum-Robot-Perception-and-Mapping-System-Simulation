@@ -80,76 +80,35 @@ public class Camera {
 
     public void loadDetectedObjectsFromFile(String filePath, String cameraKey) {
         try (FileReader reader = new FileReader(filePath)) {
-            System.out.println("Camera attempting to read file: " + new File(filePath).getAbsolutePath());
+            System.out.println("Attempting to load JSON from: " + filePath);
+    
+            // שימוש ב-Gson לקריאת הקובץ
             Gson gson = new Gson();
+            java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {}.getType();
+            Map<String, List<List<StampedDetectedObject>>> cameraData = gson.fromJson(reader, type);
     
-            // קריאת הנתונים מהקובץ
-            java.lang.reflect.Type type = new TypeToken<Map<String, Object>>() {}.getType();
-            Map<String, Object> cameraData = gson.fromJson(reader, type);
+            // שליפת הנתונים עבור המצלמה המבוקשת
+            List<List<StampedDetectedObject>> nestedList = cameraData.get(cameraKey);
     
-            // בדיקת קיום המפתח עבור המצלמה
-            if (!cameraData.containsKey(cameraKey)) {
-                System.err.println("Camera key '" + cameraKey + "' not found in file.");
-                detectedObjectsList = new ArrayList<>();
-                return;
-            }
-    
-            Object rawData = cameraData.get(cameraKey);
-    
-            if (rawData instanceof List) {
-                // בדיקה האם מדובר ברשימה שטוחה או מקוננת
-                List<?> dataList = (List<?>) rawData;
-    
-                if (!dataList.isEmpty() && dataList.get(0) instanceof List) {
-                    // רשימה מקוננת
-                    List<List<StampedDetectedObject>> nestedList = gson.fromJson(
-                        gson.toJson(dataList),
-                        new TypeToken<List<List<StampedDetectedObject>>>() {}.getType()
-                    );
-    
-                    detectedObjectsList = new ArrayList<>();
-                    for (List<StampedDetectedObject> innerList : nestedList) {
-                        detectedObjectsList.addAll(innerList);
-                    }
-    
-                } else {
-                    // רשימה שטוחה
-                    detectedObjectsList = gson.fromJson(
-                        gson.toJson(dataList),
-                        new TypeToken<List<StampedDetectedObject>>() {}.getType()
-                    );
+            // פשט את המערך המקונן
+            detectedObjectsList = new ArrayList<>();
+            if (nestedList != null) {
+                for (List<StampedDetectedObject> innerList : nestedList) {
+                    detectedObjectsList.addAll(innerList);
                 }
-    
-                // חישוב הזמן המקסימלי
-                maxTime = detectedObjectsList.stream()
-                                             .mapToInt(StampedDetectedObject::getTime)
-                                             .max()
-                                             .orElse(0);
-    
-                System.out.println("Camera " + id + " successfully loaded " + detectedObjectsList.size() + " detected objects.");
-            } else {
-                System.err.println("Camera key '" + cameraKey + "' contains invalid data structure.");
-                detectedObjectsList = new ArrayList<>();
             }
+    
+            System.out.println("Camera " + id + " loaded " + detectedObjectsList.size() + " detected objects.");
         } catch (IOException e) {
-            System.err.println("Error reading file: " + e.getMessage());
+            System.err.println("IOException occurred: " + e.getMessage());
             detectedObjectsList = new ArrayList<>();
         } catch (Exception e) {
-            System.err.println("Unexpected error while processing file: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Exception occurred: " + e.getMessage());
             detectedObjectsList = new ArrayList<>();
         }
-    
-        // הדפסת הנתונים שנטענו
-        if (!detectedObjectsList.isEmpty()) {
-            System.out.println("Camera " + id + " detected objects:");
-            for (StampedDetectedObject obj : detectedObjectsList) {
-                System.out.println("  Time: " + obj.getTime() + ", Objects: " + obj.getDetectedObjects());
-            }
-        } else {
-            System.err.println("Camera " + id + " detectedObjectsList is empty.");
-        }
     }
+    
+    
     
     
 
