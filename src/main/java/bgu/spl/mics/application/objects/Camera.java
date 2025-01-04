@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +39,15 @@ public class Camera {
         } else {
             this.maxTime = 3; // ברירת מחדל במידה ולא נטענו נתונים
         }
+    }
+    public Camera(int id, int frequency, List<StampedDetectedObject> detectedObjectsList) {
+        this.id = id;
+        this.frequency = frequency;
+        this.status = STATUS.UP;
+        this.errMString = null;
+        this.detectedObjectsList = detectedObjectsList != null
+                ? Collections.unmodifiableList(detectedObjectsList)
+                : Collections.emptyList(); // Ensure immutability of preloaded data
     }
     
 
@@ -80,30 +90,26 @@ public class Camera {
 
     public void loadDetectedObjectsFromFile(String filePath, String cameraKey) {
         try (FileReader reader = new FileReader(filePath)) {
-            System.out.println("Attempting to load JSON from: " + filePath);
-    
-            // שימוש ב-Gson לקריאת הקובץ
+            System.out.println("Camera attempting to read file: " + new File(filePath).getAbsolutePath());
             Gson gson = new Gson();
-            java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {}.getType();
+            java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {
+            }.getType();
             Map<String, List<List<StampedDetectedObject>>> cameraData = gson.fromJson(reader, type);
-            
-            // שליפת הנתונים עבור המצלמה המבוקשת
-            List<List<StampedDetectedObject>> nestedList = cameraData.get(cameraKey);
-    
-            // פשט את המערך המקונן
-            detectedObjectsList = new ArrayList<>();
-            if (nestedList != null) {
-                for (List<StampedDetectedObject> innerList : nestedList) {
-                    detectedObjectsList.addAll(innerList);
+            List<List<StampedDetectedObject>> nestedCameraObjects = cameraData.get(cameraKey);
+            if (nestedCameraObjects != null) {
+                List<StampedDetectedObject> cameraObjects = new ArrayList<>();
+                for (List<StampedDetectedObject> list : nestedCameraObjects) {
+                    cameraObjects.addAll(list);
                 }
+                detectedObjectsList = new ArrayList<>(cameraObjects);
+                maxTime = cameraObjects.stream().mapToInt(StampedDetectedObject::getTime).max().orElse(4);
+            } else {
+                detectedObjectsList = new ArrayList<>();
             }
-    
             System.out.println("Camera " + id + " loaded " + detectedObjectsList.size() + " detected objects.");
         } catch (IOException e) {
-            System.err.println("IOException occurred: " + e.getMessage());
             detectedObjectsList = new ArrayList<>();
         } catch (Exception e) {
-            System.err.println("Exception occurred: " + e.getMessage());
             detectedObjectsList = new ArrayList<>();
         }
     }

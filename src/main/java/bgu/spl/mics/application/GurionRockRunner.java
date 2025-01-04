@@ -2,7 +2,11 @@ package bgu.spl.mics.application;
 
 import bgu.spl.mics.application.objects.*;
 import bgu.spl.mics.application.services.*;
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import java.io.File;
 import java.io.FileReader;
@@ -10,7 +14,7 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * Main entry point for the GurionRock Pro Max Ultra Over 9000 simulation.
+ * The main entry point for the GurionRock Pro Max Ultra Over 9000 simulation.
  */
 public class GurionRockRunner {
 
@@ -22,148 +26,196 @@ public class GurionRockRunner {
 
         String configFilePath = args[0];
         File configFile = new File(configFilePath);
-
+        // Get the parent directory of the config file
+        File configDirectory = configFile.getParentFile();
+        System.out.println("Config directory resolved to: " + configDirectory.getAbsolutePath());
         if (!configFile.exists()) {
             System.err.println("Configuration file not found at: " + configFilePath);
             return;
         }
 
-        String basePath = configFile.getParent();
-        List<Camera> cameras = new ArrayList<>();
-        List<LiDarWorkerTracker> lidars = new ArrayList<>();
-        GPSIMU gpsimu = null;
-        FusionSlam fusionSlam = null;
-        int tickTime = 0;
-        int duration = 0;
-
-        try {
-            // Read the configuration file
+        
+        try (FileReader reader = new FileReader(configFilePath)) {
             Gson gson = new Gson();
-            JsonObject config = gson.fromJson(new FileReader(configFile), JsonObject.class);
+            JsonObject config = JsonParser.parseReader(reader).getAsJsonObject();
 
-            // Parse simulation time parameters
-            tickTime = config.get("TickTime").getAsInt();
-            duration = config.get("Duration").getAsInt();
+            System.out.println("Configuration loaded successfully.");
+            System.out.println("Configuration content: " + config);
 
             // Parse Cameras
-            parseCameras(config, basePath, cameras);
+            System.out.println("Parsing Cameras...");
+            List<Camera> cameras = parseCameras(config, configDirectory);
 
             // Parse LiDARs
-            parseLidars(config, basePath, lidars);
+            System.out.println("Parsing LiDARs...");
+            List<LiDarWorkerTracker> lidars = parseLidars(config, configDirectory);
 
-            // Parse GPSIMU
-            String poseJsonFile = config.get("poseJsonFile").getAsString();
-            gpsimu = new GPSIMU(new File(basePath, poseJsonFile).getAbsolutePath());
+            // Parse PoseService
+            System.out.println("Parsing PoseService...");
+            String poseDataPath = config.get("poseJsonFile").getAsString();
+            File poseDataFile = new File(configDirectory, poseDataPath);
+            if (!poseDataFile.exists()) {
+                System.err.println("Pose data file not found: " + poseDataFile.getAbsolutePath());
+                return;
+            }
+            GPSIMU gpsimu = new GPSIMU(poseDataFile.getAbsolutePath());
+            PoseService poseService = new PoseService(gpsimu);
+            Thread poseThread = new Thread(poseService, "PoseService");
 
-            // Initialize FusionSlam
-            int numOfSensors = cameras.size() + lidars.size() + 1; // +1 for GPS
-            fusionSlam = FusionSlam.getInstance();
-            fusionSlam.setserviceCounter(numOfSensors);
+            // Parse TimeService
+            System.out.println("Parsing TimeService...");
+            int tickTime = config.get("TickTime").getAsInt();
+            int duration = config.get("Duration").getAsInt();
+            TimeService timeService = new TimeService(tickTime, duration);
+            Thread timeThread = new Thread(timeService, "TimeService");
 
-            // Display initialization summary
-            System.out.println("System Initialized:");
-            System.out.println("Cameras: " + cameras.size());
-            System.out.println("LiDar Workers: " + lidars.size());
-            System.out.println("GPSIMU: Initialized");
-            System.out.println("FusionSlam: Initialized with " + numOfSensors + " sensors");
+            // Initialize Fusion-SLAM
+            System.out.println("Initializing Fusion-SLAM...");
+            FusionSlam fusionSlam = FusionSlam.getInstance();
+            FusionSlamService fusionSlamService = new FusionSlamService(fusionSlam);
+            Thread fusionSlamThread = new Thread(fusionSlamService, "FusionSlamService");
+
+            // Update FusionSlam with service count
+            int totalServices = cameras.size() + lidars.size() + 1; // +1 for PoseService
+            fusionSlam.setserviceCounter(totalServices);
+            System.out.println("Total services registered in Fusion-SLAM: " + totalServices);
+
+            // Start all threads except TimeService
+            System.out.println("Starting threads...");
+            List<Thread> threads = new ArrayList<>();
+            for (Camera camera : cameras) {
+                System.out.println("Starting CameraService for Camera ID: " + camera.getId());
+                CameraService cameraService = new CameraService(camera);
+                threads.add(new Thread(cameraService, "CameraService" + camera.getId()));
+            }
+
+            for (LiDarWorkerTracker lidar : lidars) {
+                System.out.println("Starting LiDarService for LiDAR ID: " + lidar.getId());
+                LiDarService lidarService = new LiDarService("LiDarService" + lidar.getId(), lidar);
+                threads.add(new Thread(lidarService, "LiDarService" + lidar.getId()));
+            }
+
+            threads.add(poseThread);
+            threads.add(fusionSlamThread);
+
+            threads.forEach(Thread::start);
+
+            // Allow time for all services to register before starting TimeService
+            System.out.println("Allowing services to register...");
+            Thread.sleep(100);
+
+            // Start TimeService last
+            System.out.println("Starting TimeService...");
+            timeThread.start();
+
+            // Wait for TimeService to complete
+            System.out.println("Waiting for TimeService to finish...");
+            timeThread.join();
+
+            System.out.println("Simulation completed successfully!");
 
         } catch (IOException e) {
             System.err.println("Error reading configuration file: " + e.getMessage());
-            return;
-        }
-
-        // Initialize Threads
-        List<Thread> threads = initializeThreads(cameras, lidars, gpsimu, fusionSlam, tickTime, duration);
-
-        // Start Threads
-        threads.forEach(Thread::start);
-
-        // Wait for FusionSlam thread to complete
-        try {
-            threads.get(threads.size() - 1).join(); // Assuming the last thread is FusionSlam
+        } catch (IllegalArgumentException e) {
+            System.err.println("Configuration error: " + e.getMessage());
         } catch (InterruptedException e) {
-            System.err.println("FusionSlam thread interrupted: " + e.getMessage());
+            Thread.currentThread().interrupt();
+            System.err.println("Simulation interrupted.");
         }
-
-        System.out.println("Simulation completed.");
     }
 
-    private static void parseCameras(JsonObject config, String basePath, List<Camera> cameras) {
-        if (!config.has("Cameras")) {
-            System.err.println("No Cameras section found in configuration.");
-            return;
-        }
-
-        JsonElement camerasElement = config.get("Cameras");
-
-        if (camerasElement.isJsonArray()) {
-            JsonArray camerasArray = camerasElement.getAsJsonArray();
-            for (int i = 0; i < camerasArray.size(); i++) {
-                JsonObject cameraJson = camerasArray.get(i).getAsJsonObject();
-                addCamera(cameras, cameraJson, basePath, "camera" + (i + 1));
+    private static List<Camera> parseCameras(JsonObject config, File configDirectory) {
+        List<Camera> cameras = new ArrayList<>();
+    
+        if (config.has("Cameras")) {
+            JsonElement camerasElement = config.get("Cameras");
+    
+            // אם השדה הוא מערך
+            if (camerasElement.isJsonArray()) {
+                JsonArray camerasArray = camerasElement.getAsJsonArray();
+                for (JsonElement cameraElement : camerasArray) {
+                    JsonObject cameraJson = cameraElement.getAsJsonObject();
+                    parseSingleCamera(cameraJson, cameras, configDirectory);
+                }
             }
-        } else if (camerasElement.isJsonObject()) {
-            JsonObject camerasObject = camerasElement.getAsJsonObject();
-            String cameraDataPath = camerasObject.get("camera_datas_path").getAsString();
-            JsonArray cameraConfigs = camerasObject.getAsJsonArray("CamerasConfigurations");
-            for (int i = 0; i < cameraConfigs.size(); i++) {
-                JsonObject cameraJson = cameraConfigs.get(i).getAsJsonObject();
-                addCamera(cameras, cameraJson, new File(basePath, cameraDataPath).getAbsolutePath(), "camera" + (i + 1));
+            // אם השדה הוא אובייקט עם CamerasConfigurations
+            else if (camerasElement.isJsonObject()) {
+                JsonObject camerasObject = camerasElement.getAsJsonObject();
+                String cameraDataPath = camerasObject.has("camera_datas_path")
+                        ? camerasObject.get("camera_datas_path").getAsString()
+                        : null;
+    
+                if (cameraDataPath != null && camerasObject.has("CamerasConfigurations")) {
+                    JsonArray camerasArray = camerasObject.getAsJsonArray("CamerasConfigurations");
+                    File cameraDataFile = new File(configDirectory, cameraDataPath);
+                    for (JsonElement cameraElement : camerasArray) {
+                        JsonObject cameraJson = cameraElement.getAsJsonObject();
+                        parseSingleCamera(cameraJson, cameras, cameraDataFile.getAbsolutePath());
+                    }
+                } else {
+                    System.err.println("Invalid Cameras configuration structure.");
+                }
+            } else {
+                System.err.println("Unexpected Cameras configuration type.");
             }
         } else {
-            System.err.println("Unexpected format for Cameras in configuration.");
+            System.err.println("No Cameras section found in configuration.");
         }
+    
+        return cameras;
     }
-
-    private static void addCamera(List<Camera> cameras, JsonObject cameraJson, String dataPath, String cameraKey) {
+    
+    private static void parseSingleCamera(JsonObject cameraJson, List<Camera> cameras, String cameraDataPath) {
         try {
             int id = cameraJson.get("id").getAsInt();
             int frequency = cameraJson.get("frequency").getAsInt();
-            cameras.add(new Camera(id, frequency, dataPath, cameraKey));
+            String key = cameraJson.get("camera_key").getAsString();
+    
+            System.out.println("Camera detected: ID=" + id + ", Frequency=" + frequency + ", Key=" + key);
+            cameras.add(new Camera(id, frequency, cameraDataPath, key));
         } catch (Exception e) {
-            System.err.println("Error adding camera: " + e.getMessage());
+            System.err.println("Error parsing camera configuration: " + e.getMessage());
         }
     }
-
-    private static void parseLidars(JsonObject config, String basePath, List<LiDarWorkerTracker> lidars) {
-        if (!config.has("LiDarWorkers")) {
-            System.err.println("No LiDARs section found in configuration.");
-            return;
-        }
-
-        JsonObject lidarConfig = config.getAsJsonObject("LiDarWorkers");
-        String lidarDataPath = lidarConfig.get("lidars_data_path").getAsString();
-        JsonArray lidarConfigs = lidarConfig.getAsJsonArray("LidarConfigurations");
-
-        for (JsonElement lidarElement : lidarConfigs) {
-            JsonObject lidarJson = lidarElement.getAsJsonObject();
-            int id = lidarJson.get("id").getAsInt();
-            int frequency = lidarJson.get("frequency").getAsInt();
-            lidars.add(new LiDarWorkerTracker(id, frequency, new File(basePath, lidarDataPath).getAbsolutePath()));
-        }
+    
+    
+    
+    private static void parseSingleCamera(JsonObject cameraJson, List<Camera> cameras, File configDirectory) {
+        int id = cameraJson.get("id").getAsInt();
+        int frequency = cameraJson.get("frequency").getAsInt();
+        String cameraDataPath = cameraJson.get("camera_datas_path").getAsString();
+        String key = cameraJson.get("camera_key").getAsString();
+    
+        File cameraDataFile = new File(configDirectory, cameraDataPath);
+        System.out.println("Camera detected: ID=" + id + ", Frequency=" + frequency + ", Key=" + key);
+    
+        cameras.add(new Camera(id, frequency, cameraDataFile.getAbsolutePath(), key));
     }
+    
 
-    private static List<Thread> initializeThreads(List<Camera> cameras, List<LiDarWorkerTracker> lidars, GPSIMU gpsimu, FusionSlam fusionSlam, int tickTime, int duration) {
-        List<Thread> threads = new ArrayList<>();
+    private static List<LiDarWorkerTracker> parseLidars(JsonObject config, File configDirectory) {
+        List<LiDarWorkerTracker> lidars = new ArrayList<>();
+        if (config.has("LiDarWorkers")) {
+            JsonObject lidarsConfig = config.getAsJsonObject("LiDarWorkers");
+            String lidarDataPath = lidarsConfig.get("lidars_data_path").getAsString();
+            File lidarDataFile = new File(configDirectory, lidarDataPath);
 
-        // Initialize Camera threads
-        cameras.forEach(camera -> threads.add(new Thread(new CameraService(camera))));
+            if (!lidarDataFile.exists()) {
+                System.err.println("LiDAR data file not found: " + lidarDataFile.getAbsolutePath());
+                return lidars;
+            }
 
-        // Initialize LiDAR threads
-        int i = 1;
-        for (LiDarWorkerTracker lidar : lidars) {
-            threads.add(new Thread(new LiDarService("LiDarService" + i++, lidar)));
+            JsonArray lidarsArray = lidarsConfig.getAsJsonArray("LidarConfigurations");
+            for (JsonElement lidarElement : lidarsArray) {
+                JsonObject lidarJson = lidarElement.getAsJsonObject();
+                int id = lidarJson.get("id").getAsInt();
+                int frequency = lidarJson.get("frequency").getAsInt();
+                System.out.println("LiDAR detected: ID=" + id + ", Frequency=" + frequency);
+                lidars.add(new LiDarWorkerTracker(id, frequency, lidarDataFile.getAbsolutePath()));
+            }
+        } else {
+            System.err.println("No LiDarWorkers section found in configuration.");
         }
-
-        // Initialize PoseService thread
-        threads.add(new Thread(new PoseService(gpsimu)));
-
-        // Initialize FusionSlamService thread
-        threads.add(new Thread(new FusionSlamService(fusionSlam)));
-
-        // Initialize TimeService thread
-        threads.add(new Thread(new TimeService(tickTime, duration)));
-
-        return threads;
+        return lidars;
     }
 }

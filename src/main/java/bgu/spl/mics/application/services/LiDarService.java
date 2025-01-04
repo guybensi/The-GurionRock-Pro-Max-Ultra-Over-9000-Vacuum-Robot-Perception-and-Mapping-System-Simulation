@@ -3,7 +3,6 @@ package bgu.spl.mics.application.services;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.CrashedBroadcast;
 import bgu.spl.mics.application.messages.DetectObjectsEvent;
-import bgu.spl.mics.application.messages.TerminateMe;
 import bgu.spl.mics.application.messages.TickBroadcast;
 import bgu.spl.mics.application.messages.TerminatedBroadcast;
 import bgu.spl.mics.application.messages.TrackedObjectsEvent;
@@ -72,7 +71,7 @@ public class LiDarService extends MicroService {
             if (broadcast.getSenderId() == "TimeService"){
                 System.out.println(getName() + ": got TerminatedBroadcast from TimeService");
                 terminate();
-                sendBroadcast(new TerminateMe(getName()));  
+                sendBroadcast(new TerminatedBroadcast(getName()));  
             }
         });
         subscribeBroadcast(CrashedBroadcast.class, (CrashedBroadcast broadcast) -> {
