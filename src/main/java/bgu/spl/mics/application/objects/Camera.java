@@ -48,7 +48,7 @@ public class Camera {
         this.detectedObjectsList = detectedObjectsList != null
                 ? Collections.unmodifiableList(detectedObjectsList)
                 : Collections.emptyList(); // Ensure immutability of preloaded data
-        this.maxTime = maxTime;
+        this.maxTime = 20;/////לזכור לשנות
         this.errMString = null;
     }
     

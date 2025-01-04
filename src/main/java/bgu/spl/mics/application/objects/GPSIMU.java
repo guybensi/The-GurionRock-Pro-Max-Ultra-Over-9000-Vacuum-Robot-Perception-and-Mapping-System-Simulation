@@ -32,7 +32,7 @@ public class GPSIMU {
         currentTick = 0;
         this.status = STATUS.UP; 
         this.poseList = poseList;
-        this.maxTime = maxTime; 
+        this.maxTime = 20; ////לזכור לשנות 
     }
 
 
@@ -87,6 +87,7 @@ public class GPSIMU {
     //Update the status to DOWN if the current time exceeds or equals the maximum time.
     public void updateStatusBasedOnTime() {
         if (currentTick >= maxTime) {
+            System.out.println("pose down because the time is " + currentTick);
             setStatus(STATUS.DOWN);
         }
     }
@@ -97,7 +98,6 @@ public class GPSIMU {
 
     public void SetTick(int time) {
         currentTick = time;
-        updateStatusBasedOnTime();
     }
 
     @Override

@@ -172,6 +172,7 @@ public abstract class MicroService implements Runnable {
                 terminate();
             }
         }
+        System.out.println(getName() + " finis loop run");
         messageBus.unregister(this);
 
     }
