@@ -28,7 +28,7 @@ public class FusionSlamTest {
         List<CloudPoint> localCoordinates = Arrays.asList(
                 new CloudPoint(1.0, 1.0),
                 new CloudPoint(2.0, 2.0),
-                new CloudPoint(0.0, 1.0) // נקודה נוספת
+                new CloudPoint(0.0, 1.0) 
         );
     
         List<CloudPoint> globalCoordinates = fusionSlam.transformToGlobal(localCoordinates, pose);
@@ -99,23 +99,15 @@ public class FusionSlamTest {
 
     @Test
     void testProcessTrackedObjectsWithPose() {
-        // יצירת השירות והאובייקטים הנדרשים
         FusionSlam fusionSlam = FusionSlam.getInstance();
-        // הוספת פוזה מתאימה מראש
-        Pose pose = new Pose(2, 1.0f, 0.0f, 0.0f); // פוזה לזמן 2
-        fusionSlam.addPose(pose); // הוספת הפוזה ישירות ל-FusionSlam
-
-        // יצירת אובייקט עם פוזה מתאימה
+        Pose pose = new Pose(2, 1.0f, 0.0f, 0.0f); 
+        fusionSlam.addPose(pose); 
         List<CloudPoint> coordinates = Arrays.asList(
                 new CloudPoint(1.0, 1.0),
                 new CloudPoint(2.0, 2.0)
         );
         TrackedObject trackedObject = new TrackedObject("Landmark1", 2, "Test Landmark", coordinates);
-
-        // קריאה ישירה לפונקציה ב-FusionSlam
         fusionSlam.processTrackedObjects(Arrays.asList(trackedObject));
-
-        // ווידוא שה-Landmark נוסף
         List<LandMark> landmarks = fusionSlam.getLandmarksMod();
         assertEquals(1, landmarks.size(), "One landmark should be added.");
         assertEquals("Landmark1", landmarks.get(0).getId(), "The added landmark should have the correct ID.");
@@ -124,23 +116,14 @@ public class FusionSlamTest {
 
     @Test
     void testProcessTrackedObjectsWithoutPose() {
-        // יצירת השירות והאובייקטים הנדרשים
         FusionSlam fusionSlam = FusionSlam.getInstance();
-
-        // ווידוא שהמערכת מתחילה במצב נקי
         fusionSlam.clearLandmarks();
-
-        // יצירת אובייקט עם זמן שאין עבורו פוזה
         List<CloudPoint> coordinates = Arrays.asList(
                 new CloudPoint(1.0, 1.0),
                 new CloudPoint(2.0, 2.0)
         );
-        TrackedObject trackedObject = new TrackedObject("Landmark1", 3, "Test Landmark", coordinates); // זמן 3 ללא פוזה
-
-        // קריאה ישירה לפונקציה ב-FusionSlam
+        TrackedObject trackedObject = new TrackedObject("Landmark1", 3, "Test Landmark", coordinates); 
         fusionSlam.processTrackedObjects(Arrays.asList(trackedObject));
-
-        // ווידוא שאין Landmarks שנוספו
         List<LandMark> landmarks = fusionSlam.getLandmarksMod();
         assertEquals(0, landmarks.size(), "No landmark should be added if no pose is available.");
     }

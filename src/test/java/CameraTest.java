@@ -3,8 +3,10 @@ import org.junit.jupiter.api.Test;
 import bgu.spl.mics.application.objects.Camera;
 import bgu.spl.mics.application.objects.STATUS;
 import bgu.spl.mics.application.objects.StampedDetectedObject;
+import bgu.spl.mics.application.objects.DetectedObject;
 
-import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,16 +16,23 @@ class CameraTest {
 
     @BeforeEach
     void setup() {
-        java.net.URL resource = getClass().getClassLoader().getResource("camera_example_input.json");
-        assertNotNull(resource, "The file 'example_input.json' was not found in src/test/resources.");
-        System.out.println("File found: " + resource.getPath());
+        // Create detected objects manually for testing
+        List<StampedDetectedObject> detectedObjectsList = new ArrayList<>();
 
-        try {
-            String filePath = Paths.get(resource.toURI()).toString();
-            camera = new Camera(1, 5, filePath, "camera1");
-        } catch (Exception e) {
-            fail("Failed to initialize camera: " + e.getMessage());
-        }
+        // Add detected objects for various times
+        detectedObjectsList.add(new StampedDetectedObject(13, List.of(
+            new DetectedObject("Wall_1", "Wall"),
+            new DetectedObject("Wall_2", "Wall")
+        )));
+        detectedObjectsList.add(new StampedDetectedObject(8, List.of(
+            new DetectedObject("Chair_Base_2", "A Blue Chair with wooden legs"),
+            new DetectedObject("ERROR", "GLaDOS has repurposed the robot to conduct endless cake-fetching tests. Success is a lie."),
+            new DetectedObject("furniture_3", "Bed")
+        )));
+        detectedObjectsList.add(new StampedDetectedObject(12, List.of()));
+
+        // Initialize the camera with the manually created data
+        camera = new Camera(1, 5, detectedObjectsList, 13); // Max time is 13
     }
 
     @Test
@@ -60,48 +69,53 @@ class CameraTest {
     @Test
     void testCheckIfDoneSetsStatusToDown() {
         camera.getDetectedObjectsAtTime(12);
-        assertEquals(STATUS.UP, camera.getStatus(), "for time 12, Camera status should remain UP for valid time.");
+        assertEquals(STATUS.UP, camera.getStatus(), "For time 12, Camera status should remain UP for valid time.");
 
         camera.getDetectedObjectsAtTime(20);
-        assertEquals(STATUS.DOWN, camera.getStatus(), "for time 20, Camera status should be set to DOWN after maxTime.");
+        assertEquals(STATUS.DOWN, camera.getStatus(), "For time 20, Camera status should be set to DOWN after maxTime.");
     }
-
 
     @Test
     void testLoadEmptyJsonFile() {
-        java.net.URL resource = getClass().getClassLoader().getResource("empty_camera_data.json");
-        assertNotNull(resource, "The file 'empty_camera_data.json' was not found in src/test/resources.");
-
-        try {
-            String filePath = Paths.get(resource.toURI()).toString();
-            Camera emptyCamera = new Camera(1, 5, filePath, "camera1");
-            assertTrue(emptyCamera.getDetectedObjectsList().isEmpty(), "Detected objects list should be empty for an empty JSON file.");
-        } catch (Exception e) {
-            fail("Unexpected exception while loading empty JSON: " + e.getMessage());
-        }
+        // Create an empty detected objects list
+        Camera emptyCamera = new Camera(1, 5, new ArrayList<>(), 0); // maxTime = 0
+        assertTrue(emptyCamera.getDetectedObjectsList().isEmpty(), "Detected objects list should be empty for an empty JSON.");
     }
 
     @Test
     void testLoadSpecificCameraKey() {
-        StampedDetectedObject result = camera.getDetectedObjectsAtTime(3);
+        // Camera 1 data
+        List<StampedDetectedObject> camera1Data = List.of(
+            new StampedDetectedObject(3, List.of(
+                new DetectedObject("Wall_3", "Wall")
+            ))
+        );
+
+        Camera camera1 = new Camera(1, 5, camera1Data, 3);
+        StampedDetectedObject result = camera1.getDetectedObjectsAtTime(3);
         assertNotNull(result, "Detected objects for camera1 should not be null.");
         assertEquals("Wall_3", result.getDetectedObjects().get(0).getId(), "The object ID should match.");
 
-        java.net.URL resource = getClass().getClassLoader().getResource("camera_example_input.json");
-        assertNotNull(resource, "The file 'camera_example_input.json' was not found in src/test/resources.");
-        try {
-            String filePath = Paths.get(resource.toURI()).toString();
-            Camera secondCamera = new Camera(2, 5, filePath, "camera2");
-            StampedDetectedObject secondResult = secondCamera.getDetectedObjectsAtTime(3);
-            assertNotNull(secondResult, "Detected objects for camera2 should not be null.");
-            assertEquals("Wall_1", secondResult.getDetectedObjects().get(0).getId(), "The object ID should match for camera2.");
-        } catch (Exception e) {
-            fail("Unexpected exception while loading camera2: " + e.getMessage());
-        }
+        // Camera 2 data
+        List<StampedDetectedObject> camera2Data = List.of(
+            new StampedDetectedObject(3, List.of(
+                new DetectedObject("Wall_1", "Wall")
+            ))
+        );
+
+        Camera camera2 = new Camera(2, 5, camera2Data, 3);
+        StampedDetectedObject secondResult = camera2.getDetectedObjectsAtTime(3);
+        assertNotNull(secondResult, "Detected objects for camera2 should not be null.");
+        assertEquals("Wall_1", secondResult.getDetectedObjects().get(0).getId(), "The object ID should match for camera2.");
     }
 
     @Test
     void testEmptyDetectedObjectsAtValidTime() {
+        List<StampedDetectedObject> detectedObjectsList = List.of(
+            new StampedDetectedObject(12, new ArrayList<>()) // Empty list at time 12
+        );
+
+        Camera camera = new Camera(1, 5, detectedObjectsList, 12);
         StampedDetectedObject result = camera.getDetectedObjectsAtTime(12);
         assertNotNull(result, "The result should not be null even if there are no detected objects.");
         assertTrue(result.getDetectedObjects().isEmpty(), "The detected objects list should be empty.");

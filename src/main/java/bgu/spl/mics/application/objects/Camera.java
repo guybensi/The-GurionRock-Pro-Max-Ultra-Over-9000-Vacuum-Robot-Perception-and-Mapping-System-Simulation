@@ -35,12 +35,11 @@ public class Camera {
             this.maxTime = detectedObjectsList.stream()
                               .mapToInt(StampedDetectedObject::getTime)
                               .max()
-                              .orElse(4);
+                              .orElse(0);
         } else {
-            this.maxTime = 3; // Default max time
+            this.maxTime = 0; 
         }
     }
-    // Constructor for main ----------------
     public Camera(int id, int frequency, List<StampedDetectedObject> detectedObjectsList, int maxTime) {
         this.id = id;
         this.frequency = frequency;
@@ -74,6 +73,17 @@ public class Camera {
         return detectedObjectsList;
     }
 
+    /**
+     * Retrieves the detected objects at a specific time, updating the camera status if errors are detected.
+     *
+     * @pre {@code time >= 0} - The time must be non-negative.
+     * @post If a match is found, the corresponding {@link StampedDetectedObject} is returned.
+     *       If the object contains an error, the camera's status is set to {@link STATUS#ERROR}.
+     *       If no match is found, {@code null} is returned.
+     *
+     * @param time The time for which to retrieve detected objects.
+     * @return The detected objects at the specified time, or {@code null} if none are found.
+     */
     public StampedDetectedObject getDetectedObjectsAtTime(int time) {
         checkIfDone(time);
         for (StampedDetectedObject stampedObject : detectedObjectsList) {
@@ -118,9 +128,14 @@ public class Camera {
     }
     
     
-    
-    
-
+    /**
+     * Checks if the camera is done detecting objects at the specified time.
+     *
+     * @pre {@code currentTime >= 0} - The current time must be non-negative.
+     * @post If {@code currentTime >= maxTime}, the camera's status is set to {@link STATUS#DOWN}.
+     *
+     * @param currentTime The current time to check against.
+     */
     public void checkIfDone(int currentTime) {
         if (currentTime >= this.maxTime) {
             setStatus(STATUS.DOWN);

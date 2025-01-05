@@ -29,27 +29,21 @@ public class FusionSlam {
     private ArrayList<LandMark> landmarks  = new ArrayList<>();
     private Map<Integer, Pose> posesByTime = new HashMap<>();
     private int tick = 0;
-
-    // i added for main-------------
     private final AtomicInteger activeCameras = new AtomicInteger(0);
     private int activeSensors = 0;
 
-    // Setter for active cameras
     public void setActiveCameras(int activeCameras) {
         this.activeCameras.set(activeCameras);
     }
 
-    // Setter for total active sensors
     public void setActiveSensors(int activeSensors) {
         this.activeSensors = activeSensors;
     }
 
-    // Getter for active cameras
     public int getActiveCameras() {
         return activeCameras.get();
     }
 
-    // Getter for total active sensors
     public int getActiveSensors() {
         return activeSensors;
     }
@@ -66,9 +60,12 @@ public class FusionSlam {
     } 
     
     /**
-     * Updates the current pose of the robot.
+     * Adds a new pose to the system, associating it with the robot's current state at a specific time.
      *
-     * @param pose The new pose.
+     * @pre {@code pose != null} - The provided pose must not be null.
+     * @post The pose is added to the internal map, and can be retrieved using {@link #getPoseAtTime(int)}.
+     *
+     * @param pose The new pose to add.
      */
     public void addPose(Pose pose) {
         posesByTime.put(pose.getTime(), pose); 
@@ -87,9 +84,14 @@ public class FusionSlam {
 
 
     /**
-     * Processes a tracked object event to update or add landmarks.
+     * Processes a list of tracked objects to update or add landmarks based on the robot's pose.
      *
-     * @param trackedObjects The list of tracked objects.
+     * @pre {@code trackedObjects != null} - The provided list of tracked objects must not be null.
+     * @post For each tracked object:
+     *       - If a landmark with the same ID exists, its coordinates are updated.
+     *       - Otherwise, a new landmark is added to the system.
+     *
+     * @param trackedObjects The list of tracked objects to process.
      */
     public synchronized void processTrackedObjects(List<TrackedObject> trackedObjects) {
         for (TrackedObject obj : trackedObjects) {
@@ -113,6 +115,9 @@ public class FusionSlam {
     }
     /**
      * Updates the coordinates of an existing landmark by averaging the new coordinates with the old ones.
+     *
+     * @pre {@code existingLandmark != null && newCoordinates != null} - Both the existing landmark and new coordinates must not be null.
+     * @post The coordinates of {@code existingLandmark} are updated to reflect the average of the old and new coordinates.
      *
      * @param existingLandmark The existing landmark to update.
      * @param newCoordinates   The new coordinates to average with the old ones.
@@ -158,6 +163,9 @@ public class FusionSlam {
 
     /**
      * Transforms local coordinates to global coordinates based on the robot's pose.
+     *
+     * @pre {@code localCoordinates != null && pose != null} - Both the list of local coordinates and the pose must not be null.
+     * @post Returns a list of global coordinates transformed according to the provided pose.
      *
      * @param localCoordinates The local coordinates to transform.
      * @param pose             The current pose of the robot.
