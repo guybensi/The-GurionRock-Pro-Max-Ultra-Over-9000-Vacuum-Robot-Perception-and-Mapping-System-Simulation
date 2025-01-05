@@ -32,7 +32,7 @@ public class GPSIMU {
         currentTick = 0;
         this.status = STATUS.UP; 
         this.poseList = poseList;
-        this.maxTime = 20; ////לזכור לשנות 
+        this.maxTime = maxTime;
     }
 
 

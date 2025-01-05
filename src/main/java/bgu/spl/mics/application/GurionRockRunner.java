@@ -68,8 +68,6 @@ public class GurionRockRunner {
                     int id = cameraJson.get("id").getAsInt();
                     int frequency = cameraJson.get("frequency").getAsInt();
                     String cameraKey = cameraJson.get("camera_key").getAsString();
-                    int duration = config.get("Duration").getAsInt();
-
                     // Retrieve stamped detected objects for this camera
                     JsonArray stampedObjectsJson = cameraData.getAsJsonArray(cameraKey);
                     List<StampedDetectedObject> detectedObjectsList = new ArrayList<>();
@@ -88,9 +86,16 @@ public class GurionRockRunner {
                         }
                         detectedObjectsList.add(new StampedDetectedObject(time, detectedObjects));
                     }
+                                        // Compute maxTime as the maximum time in the detectedObjectsList
+                    int maxTime = detectedObjectsList.stream()
+                    .mapToInt(StampedDetectedObject::getTime)
+                    .max()
+                    .orElse(0); // Default to 0 if the list is empty
+
+                    // Create Camera object with the computed maxTime
 
                     // Create Camera object and corresponding CameraService
-                    Camera camera = new Camera(id, frequency, detectedObjectsList, duration);
+                    Camera camera = new Camera(id, frequency, detectedObjectsList, maxTime);
                     cameraServices.add(new CameraService(camera));
                 }
             }
@@ -130,16 +135,20 @@ public class GurionRockRunner {
                 java.lang.reflect.Type poseListType = new com.google.gson.reflect.TypeToken<List<Pose>>() {
                 }.getType();
                 List<Pose> poseList = gson.fromJson(poseReader, poseListType);
-                int duration = config.get("Duration").getAsInt();
+                // Compute maxTime as the maximum time in the poseList
+                int maxTime = poseList.stream()
+                .mapToInt(Pose::getTime) // Assuming Pose has a getTime method
+                .max()
+                .orElse(0); // Default to 0 if the list is empty
 
                 // Create GPSIMU and initialize PoseService
-                GPSIMU gpsimu = new GPSIMU(poseList, duration);
+                GPSIMU gpsimu = new GPSIMU(poseList, maxTime);
                 poseService = new PoseService(gpsimu);
             }
 
             // Initialize FusionSlamService
             FusionSlam fusionSlam = FusionSlam.getInstance();
-            FusionSlamService fusionSlamService = new FusionSlamService(fusionSlam);
+            FusionSlamService fusionSlamService = new FusionSlamService(fusionSlam, configDirectory);
 
             // Count active cameras and sensors
             int numActiveCameras = cameraServices.size();

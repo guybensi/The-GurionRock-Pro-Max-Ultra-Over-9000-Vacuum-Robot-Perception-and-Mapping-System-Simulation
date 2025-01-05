@@ -1,5 +1,6 @@
 package bgu.spl.mics.application.services;
 
+import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.PriorityQueue;
 import bgu.spl.mics.*;
@@ -14,16 +15,18 @@ public class FusionSlamService extends MicroService {
     private final FusionSlam fusionSlam;
     private PriorityQueue<TrackedObjectsEvent> waitingTrackedObjects = 
         new PriorityQueue<>(Comparator.comparingInt(e -> e.getTrackedObjects().get(0).getTime()));
-
+        String outputFilePath;
 
     /**
      * Constructor for FusionSlamService.
      *
      * @param fusionSlam The FusionSLAM object responsible for managing the global map.
      */
-    public FusionSlamService(FusionSlam fusionSlam) {
+    public FusionSlamService(FusionSlam fusionSlam, String configDirectory) {
         super("FusionSlamService");
-        this.fusionSlam = FusionSlam.getInstance();    }
+        this.fusionSlam = FusionSlam.getInstance();
+        this.outputFilePath = Paths.get(configDirectory, "output_file.json").toString();
+        }
 
     /**
      * Initializes the FusionSlamService.
@@ -74,17 +77,19 @@ public class FusionSlamService extends MicroService {
             String errorDescription = broadcast.getErrorMessage(); 
             String faultySensor = broadcast.getSenderId(); 
             System.out.println(getName() + ": is printing an error output file");
-            fusionSlam.generateOutputFileWithError("output_file.json", errorDescription, faultySensor);
+            fusionSlam.generateOutputFileWithError(outputFilePath, errorDescription, faultySensor);
         });
         subscribeBroadcast(TerminatedBroadcast.class, broadcast -> {
-            fusionSlam.decreaseServiceCounter();
-            System.out.println(getName() + ": counter is "+ fusionSlam.getserviceCounter()+ "because of" +broadcast.getSenderId() ) ;
-            if (fusionSlam.getserviceCounter() == 0) {
-                System.out.println(getName() + ": counter is 0 to terminate");
-                terminate();
-                System.out.println(getName() + ": is terminated");
-                System.out.println(getName() + ": is printing an output file");
-                fusionSlam.generateOutputFileWithoutError("output_file.json");
+            if (broadcast.getSenderId() != "TimeService "){
+                fusionSlam.decreaseServiceCounter();
+                System.out.println(getName() + ": counter is "+ fusionSlam.getserviceCounter()+ "because of" +broadcast.getSenderId() ) ;
+                if (fusionSlam.getserviceCounter() == 0) {
+                    System.out.println(getName() + ": counter is 0 to terminate");
+                    terminate();
+                    System.out.println(getName() + ": is terminated");
+                    System.out.println(getName() + ": is printing an output file");
+                    fusionSlam.generateOutputFileWithoutError(outputFilePath);
+                }
             }
         });
     }

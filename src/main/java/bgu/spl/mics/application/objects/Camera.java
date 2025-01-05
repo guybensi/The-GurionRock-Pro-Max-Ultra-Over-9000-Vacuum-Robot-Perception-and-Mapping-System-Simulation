@@ -44,11 +44,11 @@ public class Camera {
     public Camera(int id, int frequency, List<StampedDetectedObject> detectedObjectsList, int maxTime) {
         this.id = id;
         this.frequency = frequency;
-        this.status = STATUS.UP; // Default status is UP
+        this.status = STATUS.UP; 
         this.detectedObjectsList = detectedObjectsList != null
                 ? Collections.unmodifiableList(detectedObjectsList)
-                : Collections.emptyList(); // Ensure immutability of preloaded data
-        this.maxTime = 20;/////לזכור לשנות
+                : Collections.emptyList(); 
+        this.maxTime = maxTime;
         this.errMString = null;
     }
     

@@ -61,7 +61,7 @@ public class PoseService extends MicroService {
             if (broadcast.getSenderId() == "TimeService"){
                 System.out.println(getName() + ": got TerminatedBroadcast from TimeService");
                 terminate();
-                sendBroadcast(new TerminateMe(getName()));  
+                sendBroadcast(new TerminatedBroadcast(getName()));  
             }
         });
         // Subscribe to TerminatedBroadcast
