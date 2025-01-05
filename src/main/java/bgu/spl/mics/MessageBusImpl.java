@@ -74,7 +74,6 @@ import java.util.concurrent.*;
                 System.out.println("No subscribers found for broadcast: " + b.getClass().getSimpleName());
             } else {
                 for (MicroService m : subscribers) {
-                    System.out.println("Broadcasting to: " + m.getName());
                     if (!microServiceQueues.containsKey(m)) {
                         System.out.println("Error: MicroService " + m.getName() + " is not registered in microServiceQueues.");
                     }

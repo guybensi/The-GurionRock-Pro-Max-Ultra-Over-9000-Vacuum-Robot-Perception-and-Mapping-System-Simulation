@@ -148,7 +148,7 @@ public class GurionRockRunner {
 
             // Update FusionSlam with active sensors and cameras
             fusionSlam.setActiveCameras(numActiveCameras);
-            fusionSlam.setActiveSensors(numActiveSensors);
+            fusionSlam.setActiveSensors(numActiveSensors +1);
 
             // Print debug information
             System.out.println("Active Cameras: " + numActiveCameras);
