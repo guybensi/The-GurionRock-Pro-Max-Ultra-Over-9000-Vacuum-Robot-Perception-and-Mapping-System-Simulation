@@ -3,7 +3,6 @@ package bgu.spl.mics.application.objects;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,6 +20,7 @@ public class LiDarDataBase {
 
     private LiDarDataBase(String filePath) {
         this.cloudPoints = loadDataFromFile(filePath);
+        this.counter.set(cloudPoints.size());
     }
     // Singleton Holder - Lazy Initialization
     private static class SingletonHolderLiDarDataBase {
@@ -50,16 +50,10 @@ public class LiDarDataBase {
 
      private List<StampedCloudPoints> loadDataFromFile(String filePath) {
         try (FileReader reader = new FileReader(filePath)) {
-            System.out.println("lidar attempting to read file: " + new File(filePath).getAbsolutePath());
             Gson gson = new Gson();
-            List<StampedCloudPoints> data = gson.fromJson(reader, new TypeToken<List<StampedCloudPoints>>() {}.getType());
-            if (data != null) {
-                counter.set(data.size());  
-            }
-            System.out.println("lidar loaded " + data.size() + " detected objects.");
-            return data;
+            return gson.fromJson(reader, new TypeToken<List<StampedCloudPoints>>() {}.getType());
         } catch (IOException e) {
-            return new ArrayList<>(); 
+            return new ArrayList<>(); // Return an empty list in case of failure
         }
     }
     

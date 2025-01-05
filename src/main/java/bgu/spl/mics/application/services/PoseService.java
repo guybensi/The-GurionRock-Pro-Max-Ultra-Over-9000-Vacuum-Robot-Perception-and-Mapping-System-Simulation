@@ -3,6 +3,7 @@ package bgu.spl.mics.application.services;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.CrashedBroadcast;
 import bgu.spl.mics.application.messages.PoseEvent;
+import bgu.spl.mics.application.messages.TerminateMe;
 import bgu.spl.mics.application.messages.TerminatedBroadcast;
 import bgu.spl.mics.application.messages.TickBroadcast;
 import bgu.spl.mics.application.objects.GPSIMU;
@@ -41,26 +42,24 @@ public class PoseService extends MicroService {
                 Pose currentPose = gpsimu.getPoseAtTime();
                 if (currentPose != null) {
                     // Broadcast PoseEvent with the current pose and sender name
-                    System.out.println(getName() + ": sent an event");
-
+                    System.out.println(getName() + ": sent PoseEvent at time"+ tick.getTime() );
                     sendEvent(new PoseEvent(currentPose, getName()));
                 }
                 if (gpsimu.getStatus() == STATUS.DOWN){
-                    System.out.println(getName() + ": is terminated");
+                    System.out.println(getName() + ": is down and terminated");
                     terminate();
                     sendBroadcast(new TerminatedBroadcast(getName())); 
                 }
             } else {
-                System.out.println(getName() + ": is terminated");
+                System.out.println(getName() + ": is down2 and terminated");
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));     
             }
         });
-        //--------------------------------------לבדוק------------------------------------------------------------
         // Subscribe to TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
             if (broadcast.getSenderId() == "TimeService"){
-                System.out.println(getName() + ": is terminated");
+                System.out.println(getName() + ": got TerminatedBroadcast from TimeService");
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));  
             }

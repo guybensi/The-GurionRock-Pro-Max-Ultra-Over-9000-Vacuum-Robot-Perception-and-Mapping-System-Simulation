@@ -1,14 +1,11 @@
 package bgu.spl.mics.application.services;
 
 import java.util.ArrayDeque;
-//import java.util.List;
 import java.util.Queue;
-
-//import bgu.spl.mics.Broadcast;
-//import bgu.spl.mics.Broadcast;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.CrashedBroadcast;
 import bgu.spl.mics.application.messages.DetectObjectsEvent;
+import bgu.spl.mics.application.messages.TerminateMe;
 import bgu.spl.mics.application.messages.TerminatedBroadcast;
 import bgu.spl.mics.application.messages.TickBroadcast;
 import bgu.spl.mics.application.objects.Camera;
@@ -73,27 +70,29 @@ public class CameraService extends MicroService {
                         }
                         DetectObjectsEvent readyEvent = eventQueue.poll(); // Remove the first event (FIFO)
                         sendEvent(readyEvent);
-                        System.out.println(getName() + ": has sent an event");
+                        System.out.println(getName() + ": has sent DetectObjectsEvent from time" + event.getStampedDetectedObjects().getTime());
                         StatisticalFolder.getInstance().updateNumDetectedObjects(
                                 readyEvent.getStampedDetectedObjects().getDetectedObjects().size()
                         );
+                        StatisticalFolder.getInstance().updateLastFrame(getName(), readyEvent);
                     }  
                 }
                 if (camera.getStatus() == STATUS.DOWN){
+                    System.out.println(getName() + ": down1 and terminate");
                     terminate();
                     sendBroadcast(new TerminatedBroadcast(getName()));  
                 }
             }
             else {//camers is down 
-                System.out.println(getName() + ": is terminated");
+                System.out.println(getName() + ": down2 and terminate");
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));     
             }
         });
-//--------------------------------------זה לא נכון צריך לתקן ולהבין מה לעשות עם ההרשמות האלו ------------------------------------------------------------
         // Subscribe to TerminatedBroadcast
         subscribeBroadcast(TerminatedBroadcast.class, (TerminatedBroadcast broadcast) -> {
             if (broadcast.getSenderId() == "TimeService"){
+                System.out.println(getName() + ": got TerminatedBroadcast from TimeService");
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));  
             }
