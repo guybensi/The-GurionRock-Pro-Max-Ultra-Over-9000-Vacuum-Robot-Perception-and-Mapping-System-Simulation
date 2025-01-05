@@ -3,6 +3,11 @@ package bgu.spl.mics.application.objects;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import bgu.spl.mics.Event;
+import bgu.spl.mics.application.messages.DetectObjectsEvent;
+import bgu.spl.mics.application.messages.TrackedObjectsEvent;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -21,11 +26,44 @@ public class FusionSlam {
         return SingletonHolderFusionSlam.INSTANCE;
     }
     
-    private ArrayList<LandMark> landmarks  = new ArrayList<>(); // Dynamic array of landmarks
-    private Map<Integer, Pose> posesByTime = new HashMap<>(); // Map to hold poses by time
-    private int serviceCounter = 0;
+    private ArrayList<LandMark> landmarks  = new ArrayList<>();
+    private Map<Integer, Pose> posesByTime = new HashMap<>();
     private int tick = 0;
+
+    // i added for main-------------
+    private final AtomicInteger activeCameras = new AtomicInteger(0);
+    private int activeSensors = 0;
+
+    // Setter for active cameras
+    public void setActiveCameras(int activeCameras) {
+        this.activeCameras.set(activeCameras);
+    }
+
+    // Setter for total active sensors
+    public void setActiveSensors(int activeSensors) {
+        this.activeSensors = activeSensors;
+    }
+
+    // Getter for active cameras
+    public int getActiveCameras() {
+        return activeCameras.get();
+    }
+
+    // Getter for total active sensors
+    public int getActiveSensors() {
+        return activeSensors;
+    }
     
+    public boolean isTerminated (){
+        return (this.activeSensors <= 0);
+    }
+    public int getserviceCounter(){
+        return activeSensors;
+    }
+
+    public void decreaseServiceCounter() {
+        this.activeSensors--;
+    } 
     
     /**
      * Updates the current pose of the robot.
@@ -33,7 +71,7 @@ public class FusionSlam {
      * @param pose The new pose.
      */
     public void addPose(Pose pose) {
-        posesByTime.put(pose.getTime(), pose); // Add the pose to the map
+        posesByTime.put(pose.getTime(), pose); 
 
     }
     
@@ -47,9 +85,6 @@ public class FusionSlam {
         return tick;
     }
 
-    public void setserviceCounter(int count){
-        this.serviceCounter = count;
-    }
 
     /**
      * Processes a tracked object event to update or add landmarks.
@@ -60,17 +95,15 @@ public class FusionSlam {
         for (TrackedObject obj : trackedObjects) {
             String id = obj.getId();
             Pose relaventPose = getPoseAtTime(obj.getTime());
-            if (relaventPose == null) {// לא אמור לקרות, רק בשביל הבדיקות
+            if (relaventPose == null) {// just for test
                 System.out.println("No pose found for time: " + obj.getTime() + ". Skipping object: " + id);
-                continue; // דילוג על האובייקט אם אין פוזה מתאימה
+                continue; 
             }
             List<CloudPoint> globalCoordinates = transformToGlobal(obj.getCoordinates(), relaventPose);
             LandMark existingLandmark = findLandMarkById(id);
             if (existingLandmark != null) {
-                // Update existing landmark by averaging coordinates
                 updateLandmarkCoordinates(existingLandmark, globalCoordinates);
             } else {
-                // Add new landmark
                 LandMark newLandmark = new LandMark(id, obj.getDescription(), globalCoordinates);
                 landmarks.add(newLandmark);
                 StatisticalFolder.getInstance().updateNumLandmarks(1);
@@ -98,13 +131,9 @@ public class FusionSlam {
 
             updatedCoordinates.add(new CloudPoint(avgX, avgY));
         }
-
-        // Add any remaining points from newCoordinates
         if (newCoordinates.size() > existingCoordinates.size()) {
             updatedCoordinates.addAll(newCoordinates.subList(size, newCoordinates.size()));
         }
-
-        // Add any remaining points from existingCoordinates
         if (existingCoordinates.size() > newCoordinates.size()) {
             updatedCoordinates.addAll(existingCoordinates.subList(size, existingCoordinates.size()));
         }
@@ -142,11 +171,8 @@ public class FusionSlam {
         double sinYaw = Math.sin(yawRadians);
     
         for (CloudPoint point : localCoordinates) {
-            // חישוב הקואורדינטות הגלובליות
             double globalX = point.getX() * cosYaw - point.getY() * sinYaw + pose.getX();
             double globalY = point.getX() * sinYaw + point.getY() * cosYaw + pose.getY();
-    
-            // הוספת הנקודה המחושבת
             globalCoordinates.add(new CloudPoint(globalX, globalY));
         }
     
@@ -171,46 +197,89 @@ public class FusionSlam {
         }
         return sb.toString();
     }
-    public boolean isTerminated (){
-        return (serviceCounter <= 0);
-    }
-    public int getserviceCounter(){
-        return serviceCounter;
-    }
-    public void increasServiceCounter(){
-        this.serviceCounter++;
-    }
-    public void decreaseServiceCounter() {
-        this.serviceCounter--;
-    } 
     
-    public void generateOutputFile(String filePath, boolean isError, String errorDescription, String faultySensor, Map<String, Object> lastFrames, List<Pose> poses) {
+  
+    public void generateOutputFileWithError(String filePath, String errorDescription, String faultySensor) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        Map<String, Object> outputData = new HashMap<>();
+        Map<String, Object> outputData = new LinkedHashMap<>(); // Ensure ordered output
+    
+        // Add error-specific fields
+        
+    
+        // Add last cameras frame
+        Map<String, Object> lastCamerasFrame = new LinkedHashMap<>();
+        Map<String, Object> lastLiDarWorkerTrackersFrame = new LinkedHashMap<>();
+        StatisticalFolder stats = StatisticalFolder.getInstance();
+        Map<String, Event<?>> lastFrames = stats.getLastFrames();
+    
+        for (Map.Entry<String, Event<?>> entry : lastFrames.entrySet()) {
+            String key = entry.getKey();
+            Event<?> event = entry.getValue();
+    
+            if (key.startsWith("Camera")) {
+                if (event instanceof DetectObjectsEvent) {
+                    DetectObjectsEvent detectEvent = (DetectObjectsEvent) event;
+                    StampedDetectedObject stampedDetectedObject = detectEvent.getStampedDetectedObjects();
+    
+                    // Build camera data
+                    Map<String, Object> cameraData = new LinkedHashMap<>();
+                    cameraData.put("time", stampedDetectedObject.getTime());
+    
+                    List<Map<String, String>> detectedObjects = new ArrayList<>();
+                    for (DetectedObject obj : stampedDetectedObject.getDetectedObjects()) {
+                        Map<String, String> objData = new LinkedHashMap<>();
+                        objData.put("id", obj.getId());
+                        objData.put("description", obj.getDescription());
+                        detectedObjects.add(objData);
+                    }
+                    cameraData.put("detectedObjects", detectedObjects);
+    
+                    lastCamerasFrame.put(key, cameraData);
+                }
+            } else if (key.startsWith("LiDar")) {
+                if (event instanceof TrackedObjectsEvent) {
+                    TrackedObjectsEvent trackedEvent = (TrackedObjectsEvent) event;
+    
+                    List<Map<String, Object>> trackedObjects = new ArrayList<>();
+                    for (TrackedObject obj : trackedEvent.getTrackedObjects()) {
+                        Map<String, Object> objData = new LinkedHashMap<>();
+                        objData.put("id", obj.getId());
+                        objData.put("time", obj.getTime());
+                        objData.put("description", obj.getDescription());
+                        objData.put("coordinates", obj.getCoordinates());
+                        trackedObjects.add(objData);
+                    }
+                    lastLiDarWorkerTrackersFrame.put(key, trackedObjects);
+                }
+            }
+        }
+        outputData.put("lastCamerasFrame", lastCamerasFrame);
+        outputData.put("lastLiDarWorkerTrackersFrame", lastLiDarWorkerTrackersFrame);
+    
+        // Add poses
+        outputData.put("poses", getAllPoses());
+        // Add landmarks to statistics
+        Map<String, Object> landmarks = new LinkedHashMap<>();
+        for (LandMark landmark : getLandmarks()) {
+            Map<String, Object> landmarkData = new LinkedHashMap<>();
+            landmarkData.put("id", landmark.getId());
+            landmarkData.put("description", landmark.getDescription());
+            landmarkData.put("coordinates", landmark.getCoordinates());
+            landmarks.put(landmark.getId(), landmarkData);
+        }
     
         // Add statistics
-        StatisticalFolder stats = StatisticalFolder.getInstance();
-        Map<String, Integer> statistics = new HashMap<>();
+        Map<String, Object> statistics = new LinkedHashMap<>();
+        statistics.put("landMarks", landmarks);
+        statistics.put ("error", errorDescription);
+        statistics.put("faultySensor", faultySensor);
         statistics.put("systemRuntime", stats.getSystemRuntime());
         statistics.put("numDetectedObjects", stats.getNumDetectedObjects());
         statistics.put("numTrackedObjects", stats.getNumTrackedObjects());
         statistics.put("numLandmarks", stats.getNumLandmarks());
+    
+        
         outputData.put("statistics", statistics);
-    
-        // Convert landMarks to Map<String, LandMark> for JSON
-        Map<String, LandMark> landMarksMap = new HashMap<>();
-        for (LandMark landmark : getLandmarks()) {
-            landMarksMap.put(landmark.getId(), landmark);
-        }
-        outputData.put("landMarks", landMarksMap);
-    
-        // Handle error-specific fields
-        if (isError) {
-            outputData.put("Error", errorDescription);
-            outputData.put("faultySensor", faultySensor);
-            outputData.put("lastFrames", lastFrames);
-            outputData.put("poses", poses);
-        }
     
         // Write JSON to file
         try (FileWriter writer = new FileWriter(filePath)) {
@@ -220,7 +289,47 @@ public class FusionSlam {
         }
     }
     
+    
+    
 
+    public void generateOutputFileWithoutError(String filePath) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        Map<String, Object> outputData = new HashMap<>();
+    
+        // Add statistics
+        StatisticalFolder stats = StatisticalFolder.getInstance();
+        Map<String, Object> statistics = Map.of(
+            "systemRuntime", stats.getSystemRuntime(),
+            "numDetectedObjects", stats.getNumDetectedObjects(),
+            "numTrackedObjects", stats.getNumTrackedObjects(),
+            "numLandmarks", stats.getNumLandmarks()
+        );
+        outputData.put("statistics", statistics);
+    
+        // Add landmarks
+        Map<String, Object> landmarks = new HashMap<>();
+        for (LandMark landmark : getLandmarks()) {
+            landmarks.put(landmark.getId(), landmark); // Gson will handle serialization
+        }
+        outputData.put("landMarks", landmarks);
+    
+        // Add poses
+        outputData.put("poses", getAllPoses()); // Gson will serialize the list
+    
+        // Write JSON to file
+        try (FileWriter writer = new FileWriter(filePath)) {
+            gson.toJson(outputData, writer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    
+    
+
+    public List<Pose> getAllPoses() {
+        return new ArrayList<>(posesByTime.values());
+    }
     public List<Pose> getPosesUpToTick(int time) {
         List<Pose> poses = new ArrayList<>();
         for (Map.Entry<Integer, Pose> entry : posesByTime.entrySet()) {

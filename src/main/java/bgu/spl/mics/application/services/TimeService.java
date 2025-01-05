@@ -13,8 +13,8 @@ import bgu.spl.mics.application.objects.StatisticalFolder;
  */
 public class TimeService extends MicroService {
 
-    private final int tickTime;  // Duration of each tick in milliseconds
-    private final int duration;  // Total number of ticks
+    private final int tickTime;  
+    private final int duration;  
 
 
 
@@ -48,26 +48,19 @@ public class TimeService extends MicroService {
             
             if (currentTick < duration && !FusionSlam.getInstance().isTerminated() && !isterminated()) {
                 try {
-                    // חכה את משך הזמן המתאים לכל Tick
                     Thread.sleep(tickTime * 1000L);
-                    
-                    // שדר את ה-Tick הבא
                     sendBroadcast(new TickBroadcast(currentTick + 1, duration));
                     int sentTick = currentTick +1;
                     System.out.println("TimeService broadcasted Tick: "  + sentTick);
-        
-                    // עדכן את זמן הריצה במערכת הסטטיסטית
                     StatisticalFolder.getInstance().updateSystemRuntime(1);
-        
                 } catch (InterruptedException e) {
                     System.out.println("TimeService interrupted during Tick: " + currentTick);
-                    Thread.currentThread().interrupt(); // שמור על סטטוס ה-interrupt
+                    Thread.currentThread().interrupt(); 
                     terminate();
                     sendBroadcast(new TerminatedBroadcast(getName()));
                     System.out.println("TimeService broadcasted TerminatedBroadcast.");
                 }
             } else {
-                // סיים את השירות כאשר התנאים מסתיימים
                 terminate();
                 sendBroadcast(new TerminatedBroadcast(getName()));
                 System.out.println("TimeService broadcasted TerminatedBroadcast.");
@@ -75,6 +68,7 @@ public class TimeService extends MicroService {
         });
         
         sendBroadcast(new TickBroadcast(1, duration));
+        StatisticalFolder.getInstance().updateSystemRuntime(1);
 
     }
 }

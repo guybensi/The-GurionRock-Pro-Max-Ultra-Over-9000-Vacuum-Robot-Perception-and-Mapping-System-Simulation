@@ -12,7 +12,6 @@ public class Pose {
     private float y;    
     private float yaw;   
 
-    // Constructor to initialize the Pose object
     public Pose(int time, float x, float y, float yaw) {
         this.time = time;
         this.x = x;
@@ -36,10 +35,10 @@ public class Pose {
         return time;
     }
 
-    // Override the toString method for a string representation of the Pose
     @Override
     public String toString() {
-        return "Pose{x=" + x + ", y=" + y + ", yaw=" + yaw + ", time=" + time + "}";
+        return String.format("{\"time\":%d,\"x\":%.2f,\"y\":%.2f,\"yaw\":%.2f}", time, x, y, yaw);
     }
+
 }
 

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +29,7 @@ public class Camera {
         this.frequency = frequency;
         this.status = STATUS.UP;
         this.errMString = null;
-        this.detectedObjectsList = new ArrayList<>(); // יוזמה של רשימה ריקה
+        this.detectedObjectsList = new ArrayList<>(); 
         loadDetectedObjectsFromFile(filePath, cameraKey);
         if (!detectedObjectsList.isEmpty()) {
             this.maxTime = detectedObjectsList.stream()
@@ -36,9 +37,21 @@ public class Camera {
                               .max()
                               .orElse(4);
         } else {
-            this.maxTime = 3; // ברירת מחדל במידה ולא נטענו נתונים
+            this.maxTime = 3; // Default max time
         }
     }
+    // Constructor for main ----------------
+    public Camera(int id, int frequency, List<StampedDetectedObject> detectedObjectsList, int maxTime) {
+        this.id = id;
+        this.frequency = frequency;
+        this.status = STATUS.UP; 
+        this.detectedObjectsList = detectedObjectsList != null
+                ? Collections.unmodifiableList(detectedObjectsList)
+                : Collections.emptyList(); 
+        this.maxTime = maxTime;
+        this.errMString = null;
+    }
+    
     
 
     public int getId() {
@@ -82,7 +95,8 @@ public class Camera {
         try (FileReader reader = new FileReader(filePath)) {
             System.out.println("Camera attempting to read file: " + new File(filePath).getAbsolutePath());
             Gson gson = new Gson();
-            java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {}.getType();
+            java.lang.reflect.Type type = new TypeToken<Map<String, List<List<StampedDetectedObject>>>>() {
+            }.getType();
             Map<String, List<List<StampedDetectedObject>>> cameraData = gson.fromJson(reader, type);
             List<List<StampedDetectedObject>> nestedCameraObjects = cameraData.get(cameraKey);
             if (nestedCameraObjects != null) {
@@ -102,6 +116,10 @@ public class Camera {
             detectedObjectsList = new ArrayList<>();
         }
     }
+    
+    
+    
+    
 
     public void checkIfDone(int currentTime) {
         if (currentTime >= this.maxTime) {

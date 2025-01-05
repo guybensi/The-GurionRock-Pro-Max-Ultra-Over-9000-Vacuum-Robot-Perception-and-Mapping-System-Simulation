@@ -17,14 +17,14 @@ public class Future<T> {
    private final Object lock = new Object();
 
    public Future() {
-   this.result = null;  // תוצאה לא מוגדרת בהתחלה
-   this.isResolved = false;  // עדיין לא "נפתר"
+   this.result = null;  
+   this.isResolved = false;  
 }
 
    public T get() {
       if (result == null) { 
          synchronized (lock) {
-            while (!isDone()) {  // Block the thread until the result is available.
+            while (!isDone()) {  
                try {
                   lock.wait();
                } catch (InterruptedException e) {
@@ -40,17 +40,17 @@ public class Future<T> {
     public void resolve(T result) {
       if (this.result == null){
          synchronized (lock) {
-            if (!isDone()) {  // Check if already resolved using isDone()
+            if (!isDone()) {  
                this.result = result;
                isResolved = true;
-               lock.notifyAll(); // Notify all threads waiting for the result.
+               lock.notifyAll(); 
             }
         }
       }
     }
  
 
-   public boolean isDone() {// אולי למחוק סנכרון
+   public boolean isDone() {
       synchronized (lock) {
          return isResolved;
       }

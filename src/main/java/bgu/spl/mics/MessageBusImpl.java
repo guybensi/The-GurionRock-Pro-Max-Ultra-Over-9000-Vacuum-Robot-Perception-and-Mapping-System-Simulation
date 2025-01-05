@@ -16,7 +16,7 @@ import java.util.concurrent.*;
         private final Map<Event<?>, Future<?>> eventFutures = new ConcurrentHashMap<>();
         private final Map<MicroService, BlockingQueue<Message>> microServiceQueues = new ConcurrentHashMap<>();
 
-        private static class SingletonHolderMessageBusImpl { // מימוש כמו שהוצג בכיתה
+        private static class SingletonHolderMessageBusImpl { 
             private static final MessageBusImpl INSTANCE = new MessageBusImpl();
         }
     
@@ -35,7 +35,7 @@ import java.util.concurrent.*;
             eventSubscribers.putIfAbsent(type, new LinkedList<>());
             Queue <MicroService> subscribers = eventSubscribers.get(type);
             synchronized(subscribers){
-                if (!subscribers.contains(m)) {  // מוודא שהמיקרו-שירות לא נרשם פעמיים
+                if (!subscribers.contains(m)) {  
                     subscribers.add(m);
                 }
             }
@@ -46,7 +46,7 @@ import java.util.concurrent.*;
             broadcastSubscribers.putIfAbsent(type, new ArrayList<>());
             List<MicroService> subscribers = broadcastSubscribers.get(type);
             synchronized(subscribers){
-                if (!subscribers.contains(m)) {  // מוודא שהמיקרו-שירות לא נרשם פעמיים
+                if (!subscribers.contains(m)) { 
                     subscribers.add(m);
                     System.out.println(m.getName() + " subscribed to Broadcast: " + type.getSimpleName());
                 }
@@ -55,19 +55,12 @@ import java.util.concurrent.*;
         }
 
         
-
-        
-
-        /**
-         * מעדכן את ה-Future של האירוע, כשהוא מקבל את תוצאת הביצוע.
-         * משתמש במידע שנשלח כדי להחזיר תוצאה ל-Future המתאימה.
-         */
         @Override
         public <T> void complete(Event<T> e, T result) {
             @SuppressWarnings("unchecked")
             Future<T> future = (Future<T>) eventFutures.get(e);
             if (future != null) {
-                future.resolve(result); // עדכון התוצאה
+                future.resolve(result); 
                 eventFutures.remove(e);
             }
         }
@@ -81,7 +74,6 @@ import java.util.concurrent.*;
                 System.out.println("No subscribers found for broadcast: " + b.getClass().getSimpleName());
             } else {
                 for (MicroService m : subscribers) {
-                    System.out.println("Broadcasting to: " + m.getName());
                     if (!microServiceQueues.containsKey(m)) {
                         System.out.println("Error: MicroService " + m.getName() + " is not registered in microServiceQueues.");
                     }
@@ -96,39 +88,30 @@ import java.util.concurrent.*;
     }
 
         
-        /**
-         * שולח אירוע למיקרו-שירות שנרשם אליו (אם יש מנוי).
-         * אם יש מנויים, האירוע נשלח לפי עקרון round-robin (ברירת מחדל: המיקרו-שירות הראשון).
-         */
         @Override
         public <T> Future<T> sendEvent(Event<T> e) {
-            // בודק אם יש מנויים לאירוע מסוג זה
             Queue <MicroService> subscribers = eventSubscribers.get(e.getClass());
             if (subscribers == null || subscribers.isEmpty()) {
                 return null;
             }
             MicroService selectedService;
             synchronized(subscribers){
-                selectedService = subscribers.poll(); // במימוש זה, בחרנו את המיקרו-שירות הראשון
+                selectedService = subscribers.poll(); 
                 if (selectedService != null) {
-                    subscribers.add(selectedService); // מעביר אותו לסוף התור
+                    subscribers.add(selectedService); 
                 }
             }
             if (selectedService == null || !microServiceQueues.containsKey(selectedService)) {
                 return null; // No valid service to handle the event
             }
             Future<T> future = new Future<>();
-            
-            // שומרים את ה-Future של האירוע כך שנוכל להחזיר את התוצאה בהמשך
             eventFutures.putIfAbsent(e, future);
             try {
-                // שולחים את האירוע למיקרו-שירות הנבחר
                 microServiceQueues.get(selectedService).put(e);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
             }
 
-            // מחזירים את ה-Future של האירוע
             return future;
         }
 
@@ -150,17 +133,13 @@ import java.util.concurrent.*;
             }
         }
 
-        /**
-         * מחפש את ההודעה הבאה בתור של המיקרו-שירות וממתין לה אם אין.
-         * במקרה שאין הודעה, המיקרו-שירות יחכה עד שתהיה אחת.
-         */
         @Override
         public Message awaitMessage(MicroService m) throws InterruptedException {
             BlockingQueue<Message> queue = microServiceQueues.get(m);
             if (queue == null){
                 throw new IllegalStateException("MicroService " + m.getName() + " is not registered.");
             }
-            return queue.take(); // Blocks until a message is available
+            return queue.take(); 
         }
 
         

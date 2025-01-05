@@ -10,10 +10,10 @@ import java.util.List;
  */
 public class TrackedObject {
 
-    private String id;  // The ID of the tracked object
-    private int time;  // The time the object was tracked
-    private String description;  // A description of the object
-    private List<CloudPoint> coordinates;  // The coordinates of the object, represented by a list of CloudPoint objects
+    private String id;  
+    private int time;  
+    private String description;  
+    private List<CloudPoint> coordinates;  
 
     /**
      * Constructor to initialize a TrackedObject with all fields.
@@ -30,7 +30,6 @@ public class TrackedObject {
         this.coordinates = coordinates != null ? coordinates : new ArrayList<>();
     }
 
-    // Getters and Setters for each field
 
     public String getId() {
         return id;
