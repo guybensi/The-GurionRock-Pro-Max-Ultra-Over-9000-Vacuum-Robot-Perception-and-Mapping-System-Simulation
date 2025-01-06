@@ -23,13 +23,28 @@ import java.util.concurrent.*;
         public static MessageBusImpl getInstance() {
             return SingletonHolderMessageBusImpl.INSTANCE;
         }
-
+        
+        /**
+         * Registers a micro-service by allocating a message queue for it.
+         *
+         * @PARAM m The micro-service to register.
+         * @PARAM m != null
+         * @POST microServiceQueues.containsKey(m)
+         */
         @Override
         public void register(MicroService m) {
             microServiceQueues.putIfAbsent(m, new LinkedBlockingQueue<>());
             System.out.println("Registered MicroService: " + m.getName());
         }
 
+         /**
+         * Subscribes a micro-service to receive events of the given type.
+         *
+         * @PARAM type The class of the event to subscribe to.
+         * @PARAM m The subscribing micro-service.
+         * @PARAM type != null && m != null
+         * @POST eventSubscribers.get(type).contains(m)
+         */
         @Override
         public <T> void subscribeEvent(Class<? extends Event<T>> type, MicroService m) {
             eventSubscribers.putIfAbsent(type, new LinkedList<>());
@@ -41,6 +56,14 @@ import java.util.concurrent.*;
             }
         }
 
+        /**
+         * Subscribes a micro-service to receive broadcasts of the given type.
+         *
+         * @PARAM type The class of the broadcast to subscribe to.
+         * @PARAM m The subscribing micro-service.
+         * @PARAM type != null && m != null
+         * @POST broadcastSubscribers.get(type).contains(m)
+         */
         @Override
         public void subscribeBroadcast(Class<? extends Broadcast> type, MicroService m) {
             broadcastSubscribers.putIfAbsent(type, new ArrayList<>());
@@ -54,7 +77,14 @@ import java.util.concurrent.*;
             
         }
 
-        
+        /**
+         * Completes an event with a given result and resolves its associated future.
+         *
+         * @PARAM e The completed event.
+         * @PARAM result The result of the event.
+         * @PRE e != null && eventFutures.containsKey(e)
+         * @POST eventFutures.get(e) == null
+         */
         @Override
         public <T> void complete(Event<T> e, T result) {
             @SuppressWarnings("unchecked")
@@ -65,29 +95,41 @@ import java.util.concurrent.*;
             }
         }
         
-
-    @Override
-    public void sendBroadcast(Broadcast b) {
-        List<MicroService> subscribers = broadcastSubscribers.get(b.getClass());
-        synchronized(subscribers){
-            if (subscribers == null || subscribers.isEmpty()) {
-                System.out.println("No subscribers found for broadcast: " + b.getClass().getSimpleName());
-            } else {
-                for (MicroService m : subscribers) {
-                    if (!microServiceQueues.containsKey(m)) {
-                        System.out.println("Error: MicroService " + m.getName() + " is not registered in microServiceQueues.");
-                    }
-                    try {
-                        microServiceQueues.get(m).put(b);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+        /**
+         * Sends a broadcast to all subscribed micro-services.
+         *
+         * @PARAM b The broadcast message.
+         * @PRE b != null
+         * @POST All subscribed micro-services have the broadcast in their queues.
+         */
+        @Override
+        public void sendBroadcast(Broadcast b) {
+            List<MicroService> subscribers = broadcastSubscribers.get(b.getClass());
+            synchronized(subscribers){
+                if (subscribers == null || subscribers.isEmpty()) {
+                    System.out.println("No subscribers found for broadcast: " + b.getClass().getSimpleName());
+                } else {
+                    for (MicroService m : subscribers) {
+                        if (!microServiceQueues.containsKey(m)) {
+                            System.out.println("Error: MicroService " + m.getName() + " is not registered in microServiceQueues.");
+                        }
+                        try {
+                            microServiceQueues.get(m).put(b);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
                     }
                 }
             }
         }
-    }
 
-        
+        /**
+         * Sends an event to one of the subscribed micro-services in a round-robin fashion.
+         * Using the round robin method
+         * @PARAM e The event to send.
+         * @PRE e != null
+         * @POST The event is added to a subscribed micro-service's queue if any exists.
+         */
         @Override
         public <T> Future<T> sendEvent(Event<T> e) {
             Queue <MicroService> subscribers = eventSubscribers.get(e.getClass());
@@ -115,6 +157,13 @@ import java.util.concurrent.*;
             return future;
         }
 
+        /**
+         * Unregisters a micro-service and removes all its subscriptions.
+         *
+         * @PARAM m The micro-service to unregister.
+         * @PRE m != null && microServiceQueues.containsKey(m)
+         * @POST !microServiceQueues.containsKey(m)
+         */
         @Override
         public void unregister(MicroService m) {
             if (microServiceQueues.containsKey(m)){
@@ -133,6 +182,13 @@ import java.util.concurrent.*;
             }
         }
 
+        /**
+         * Retrieves the next message for a micro-service from its queue.
+         *
+         * @PARAM m The micro-service requesting a message.
+         * @PRE m != null && microServiceQueues.containsKey(m)
+         * @POST Returns the next available message or blocks until one is available.
+         */
         @Override
         public Message awaitMessage(MicroService m) throws InterruptedException {
             BlockingQueue<Message> queue = microServiceQueues.get(m);
